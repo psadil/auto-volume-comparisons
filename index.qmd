@@ -60,7 +60,7 @@ In this study, we assessed these differences, exploring the extent to which they
 
 # Results
 
-Data from the UKBiobank were used (downloaded Nov 2023), containing `r dplyr::n_distinct(ukb_vols$f.eid)` participants with usable data [@alfaro-almagro2018]. Of primary interest were the subcortical volumes as estimated by FreeSurfer ASEG (Category 190) and FAST (Category 1101). For details on ICC calculations, see @sec-icc-models.
+Data from the UKBiobank were used (downloaded Nov 2023), containing `r dplyr::n_distinct(ukb_vols$f.eid)` participants with usable data [@alfaro-almagro_image_2018]. Of primary interest were the subcortical volumes as estimated by FreeSurfer ASEG (Category 190) and FAST (Category 1101). For details on ICC calculations, see @sec-icc-models.
 
 ```{r ukbv}
 #| label: fig-vol-comparison
@@ -134,7 +134,7 @@ To estimate how often these issues may occur, simulations were performed. In eac
 
 With lower consistency, the two methods are more likely to produce estimates of correlation that are on opposite sides of significance thresholds (@fig-sm-errors). For example, with consistency near the value that was estimated for the amygdala volumes (0.2), around 24% of experiments with 50 participants may entail one method resulting in a $p$-value that is greater than 0.05 and the other method having a $p$-value between 0.025 and 0.05. In cases where both methods are significant at the 0.05 level, around 30% of experiments would result in correlations that go in opposite directions.
 
-To assess how often these issues could occur in practice, we returned to the UKB. We extracted the "Cognitive" factors using the FMRIB UKBiobank Normalisation, Parsing And Cleaning Kit [@mccarthy2023].
+To assess how often these issues could occur in practice, we returned to the UKB. We extracted the "Cognitive" factors using the FMRIB UKBiobank Normalisation, Parsing And Cleaning Kit [@mccarthy_funpack_2023].
 
 ```{r}
 targets::tar_load(cog_dif_sig)
@@ -159,7 +159,7 @@ b <- cog_dif_dir |>
 
 # Discussion
 
-We explored consistency of subcortical volumes within the UK Biobank [@alfaro-almagro2018], observing low reliability between measures of the Amygdala. Simulations revealed that, through low reliability alone, two measures of volume may suggest opposite conclusions in approximately 25% of studies in which both are significant, and the two methods may have different significance in 20% of studies. Finally, we test this within the UKB, finding that there are differences in the magnitude of estimated relationships between subcortical volumes and psychosocial variables when the volumes are estimated by different methods, but the signs of the and the two methods could lead to opposing conclusions.
+We explored consistency of subcortical volumes within the UK Biobank [@alfaro-almagro_image_2018], observing low reliability between measures of the Amygdala. Simulations revealed that, through low reliability alone, two measures of volume may suggest opposite conclusions in approximately 25% of studies in which both are significant, and the two methods may have different significance in 20% of studies. Finally, we test this within the UKB, finding that there are differences in the magnitude of estimated relationships between subcortical volumes and psychosocial variables when the volumes are estimated by different methods, but the signs of the and the two methods could lead to opposing conclusions.
 
 In general, although the lack of consistency may be troubling, note that values may relate to several factors beyond just the method. That is, estimated volumes can differ substantially within an individual due to factors like site, scanner, positioning, software version, and even time [@hedges2022; @du2021; @mcguire2017; @yang2016; @liu2020; @mulder2014; @morey2010]. In particular, one small study (N=23) suggested that the ICC for amygdala volumes estimated by FIRST, across repeated scans of the same individual, may be as low as 0.6 [@morey2010]. If these factors affect the two methods differently, then we may expect that they could contribute to the discordance between the two methods.
 

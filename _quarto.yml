@@ -10,7 +10,6 @@ execute:
 
 format:
   elsevier-pdf:
-    keep-tex: true
     includes:
       in_header: 'gt_packages.sty'
     journal:
@@ -18,6 +17,9 @@ format:
       formatting: preprint
       model: 1p
       cite-style: authoryear
-
-
-
+    citeproc: false
+    filters: 
+      - at: pre-render
+        path: "_extensions/andrewheiss/wordcount/citeproc.lua"
+      - at: pre-render
+        path: "_extensions/andrewheiss/wordcount/wordcount.lua"
