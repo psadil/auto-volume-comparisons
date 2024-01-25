@@ -1,18 +1,10 @@
 
 
-
-sample_cog_cor <- function(ukb_vols_long, cognitive, N, i){
-  
+.get_one_cog_cor <- function(cognitive, ukb_vols, N){
   cog_0 <- dplyr::slice_sample(cognitive, n=N) |>
     purrr::discard(~sum(is.na(.x))/length(.x) >= .5) 
   
-  ukb_vols_long |>
-    dplyr::filter(
-      stringr::str_detect(Structure, "Amygdala"),
-    ) |>
-    dplyr::summarise(
-      Volume = sum(Volume), 
-      .by = c(f.eid, Structure, Method)) |>
+  ukb_vols |>
     dplyr::right_join(cog_0, by = dplyr::join_by(f.eid)) |>
     dplyr::filter(!is.na(Structure)) |>
     dplyr::select(
@@ -39,8 +31,31 @@ sample_cog_cor <- function(ukb_vols_long, cognitive, N, i){
     tidyr::separate(predictor, c("Method", "predictor"), sep = "_") |>
     dplyr::mutate(fit = purrr::map(fit, broom::tidy)) |>
     tidyr::unnest(fit) |>
-    dplyr::select(Method, predictor, estimate, p.value, conf.low, conf.high) |>
-    dplyr::mutate(N=N, i=i)
+    dplyr::select(Method, predictor, estimate, p.value, conf.low, conf.high)
+    
+}
+
+sample_cog_cor <- function(ukb_vols_long, cognitive, cog_cor_full_ukb, N, i, n_predictors=100){
+  
+  cog_cor_max_ukb <- cog_cor_full_ukb |>
+    dplyr::summarize(estimate = abs(mean(estimate)), .by=c(predictor)) |>
+    dplyr::slice_max(estimate, n=n_predictors) |>
+    dplyr::distinct(predictor)
+  
+  cog_keep <- cognitive |>
+    dplyr::select(f.eid, tidyselect::any_of(unique(cog_cor_max_ukb$predictor)))
+
+  amyg_vols <- ukb_vols_long |>
+    dplyr::filter(stringr::str_detect(Structure, "Amygdala")) |>
+    dplyr::summarise(
+      Volume = sum(Volume), 
+      .by = c(f.eid, Structure, Method))
+  
+  tidyr::crossing(N=N, i=seq_len(i)) |>
+    dplyr::mutate(
+      data = purrr::map(N, ~.get_one_cog_cor(N=.x, ukb_vols = amyg_vols, cognitive = cog_keep))
+    ) |>
+    tidyr::unnest(data)
 }
 
 

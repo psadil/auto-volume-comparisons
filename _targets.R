@@ -7,7 +7,8 @@ source("R/partials.R")
 source("R/cognitive.R")
 
 targets::tar_option_set(
-  packages = c("ggplot2", "rlang")
+  packages = c("ggplot2", "rlang"),
+  controller = crew::crew_controller_local(workers = 4)
 )
 
 list(
@@ -43,21 +44,21 @@ list(
   ),
   tar_target(cognitive_tsv, "data/cognitive.tsv", format = "file"),
   tar_target(cognitive, prep_cognitive(cognitive_tsv), format = "parquet"),
-  tar_target(cor_i, seq_len(1000)),
-  tar_target(
-    cog_cor, 
-    sample_cog_cor(
-      ukb_vols_long=ukb_vols_long,
-      cognitive=cognitive,
-      N=sm_N,
-      i=cor_i), 
-    format = "parquet",
-    pattern = cross(sm_N, cor_i)),
   tar_target(
     cog_cor_full_ukb,
     get_cog_cor_full_ukb(cognitive=cognitive, ukb_vols_long=ukb_vols_long),
     format = "parquet"
   ),
+  tar_target(
+    cog_cor, 
+    sample_cog_cor(
+      ukb_vols_long=ukb_vols_long,
+      cognitive=cognitive,
+      cog_cor_full_ukb=cog_cor_full_ukb,
+      N=sm_N,
+      i=100000), 
+    format = "parquet",
+    pattern = map(sm_N)),
   tar_target(
     cog_dif_sig, 
     get_cog_dif_sig(cog_cor=cog_cor, cog_cor_full_ukb=cog_cor_full_ukb),

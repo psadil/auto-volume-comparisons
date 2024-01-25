@@ -69,3 +69,13 @@ plot_struct <- function(volumes, StructName, base_size = 6) {
     ggplot2::ggtitle(StructName) +
     ggplot2::theme_gray(base_size = base_size)
 }
+
+subscript_formatting <- function(x){
+  stringr::str_replace_all(
+    x,
+    pattern = "@@",
+    replacement = "$_{") |>
+    stringr::str_replace_all(
+      "@",
+      "}$") 
+}
