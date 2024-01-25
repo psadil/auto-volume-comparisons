@@ -1,17 +1,23 @@
 project:
   type: manuscript
+  render: 
+    - "index.qmd"
+    - "!notes.qmd"
 
 execute:
   freeze: auto
+  cache: true
 
 format:
-  html:
-    toc: true
-    comments:
-      hypothesis: true
-  docx: default
-  jats: default
-  agu-pdf: default
+  elsevier-pdf:
+    keep-tex: true
+    includes:
+      in_header: 'gt_packages.sty'
+    journal:
+      name: Journal Name
+      formatting: preprint
+      model: 1p
+      cite-style: authoryear
 
 
 

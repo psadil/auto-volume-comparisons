@@ -1,111 +1,647 @@
 ---
-title: La Palma Earthquakes
+title: Title TK
 author:
-  - name: Steve Purves
-    orcid: 0000-0002-0760-5497
+  - name: Patrick Sadil
     corresponding: true
-    email: steve@curvenote.com
-    roles:
-      - Investigation
-      - Project administration
-      - Software
-      - Visualization
+    email: psadil1@jh.edu
     affiliations:
-      - Curvenote
-  - name: Rowan Cockett
-    orcid: 0000-0002-7859-8394
+      - Johns Hopkins Bloomberg School of Public Health
+  - name: Martin Lindquist
     corresponding: false
     roles: []
     affiliations:
-      - Curvenote
+      - Johns Hopkins Bloomberg School of Public Health
 keywords:
-  - La Palma
-  - Earthquakes
+  - MRI
 abstract: |
-  In September 2021, a significant jump in seismic activity on the island of La Palma (Canary Islands, Spain) signaled the start of a volcanic crisis that still continues at the time of writing. Earthquake data is continually collected and published by the Instituto Geográphico Nacional (IGN). ...
+ . ...
 plain-language-summary: |
-  Earthquake data for the island of La Palma from the September 2021 eruption is found ...
+  . ...
 key-points:
-  - A web scraping script was developed to pull data from the Instituto Geogràphico Nacional into a machine-readable form for analysis
-  - Earthquake events on La Palma are consistent with the presence of both mantle and crustal reservoirs.
+  - Two popular methods of automated subcortical segmentation, FreeSurfer and FIRST, produce estimates of volume with variable consistency.
 date: last-modified
 bibliography: references.bib
-citation:
-  container-title: Earth and Space Science
 number-sections: true
+notebook-links: false
 ---
 
-## Introduction
+```{r setup}
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+library(agree)
+library(tidyr)
+library(purrr)
 
-```{r}
-eruptions <- c(1492, 1585, 1646, 1677, 1712, 1949, 1971, 2021)
-n_eruptions <- length(eruptions)
+source(here::here("R/figures.R"))
+targets::tar_load(ukb_vols_long)
+targets::tar_load(ukb_vols) 
+
+subscript_formatting <- function(x){
+  stringr::str_replace_all(
+    x,
+    pattern = "@@",
+    replacement = "$_{") |>
+    stringr::str_replace_all(
+      "@",
+      "}$") 
+}
 ```
 
-```{r}
-#| label: fig-timeline
-#| fig-cap: Timeline of recent earthquakes on La Palma
-#| fig-alt: An event plot of the years of the last 8 eruptions on La Palma.
-#| fig-height: 1.5
-#| fig-width: 6
-par(mar = c(3, 1, 1, 1) + 0.1)
-plot(eruptions, rep(0, n_eruptions), 
-  pch = "|", axes = FALSE)
-axis(1)
-box()
+# Introduction
+
+Within neuroimaging research, structural measures are valued in part for their epistemic validity -- that is, the value of the measure is thought to be a property that is distinct from the method by which it was collected, and other methods could measure the same value. Put another way, there are clear "gold standard" to which the properties derived from structural imaging can be compared, such as postmortem dissection and assessment. These gold standards further provide an objective way to assess novel computational techniques, and so the performance of techniques can be compared to each other objectively.
+
+For estimating regional subcortical volumes, two automated techniques are popular: FMRIB's Integrated Registration and Segmentation Tool (FIRST) and FreeSurfer's Automated Segmentation (ASEG) [@patenaude2007; @patenaude2011; @fischl2012]. Both techniques exhibit high consistency with manual segmentation in healthy adults and some clinical populations [@hsu2002; @tae2008; @morey2009; @pardoe2009; @dewey2010; @lehmann2010; @doring2011], with some regional variability. For the hippocampus, FreeSurfer has been reported as having higher intraclass correlations than FSL [@doring2011]. Neither method appears to have worse reliability than manual segmentation [@mulder2014a]. For the amygdala, which method performs better depends on the metric [@morey2009]. FIRST may better match manual segmentation on the putamen, and the methods perform similarly on the caudate [@perlaki2017]. These comparisons may not hold in other populations (e.g., pediatric, elderly), given that performance of the automated techniques is not consistently high across populations [@schoemaker2016; @kim2012; @sánchez-benavides2010].
+
+While comparisons against manual segmentation help identify which automated method performs better, as a practical matter the literature contains reports in which both tools have been used, and it remains less clear how the two methods compare to each other. In an elderly population, FreeSurfer tends to estimate volumes that are larger than those estimated by FIRST [@gomez-ramirez2022]. Constant shifts could be important for establishing norms but will matter less for the development of biomarkers (e.g., correlation between volume and susceptibility to a disease).
+
+In this study, we assessed these differences, exploring the extent to which they are systematic or unsystematic. In particular, we were interested in determining whether researchers who primarily use one set of measurements will reach the same conclusion as researchers who use the other.
+
+# Results
+
+Data from the UKBiobank were used (downloaded Nov 2023), containing `r dplyr::n_distinct(ukb_vols$f.eid)` participants with usable data [@alfaro-almagro2018]. Of primary interest were the subcortical volumes as estimated by FreeSurfer ASEG (Category 190) and FAST (Category 1101). For details on ICC calculations, see @sec-icc-models.
+
+```{r ukbv}
+#| label: fig-vol-comparison
+#| fig-cap: "Comparisons of Subcortical Volumes Estimated by FIRST and FreeSurfer for two example regions a) Hippocampus and b) Amygdala. For additional regions, see Supplementary Materials."
+#| fig-height: 8
+
+a <- ukb_vols |>
+  plot_struct("Hippocampus", base_size = 8) |>
+  GGally::ggmatrix_gtable() |>
+  wrap_elements()
+b <- ukb_vols |>
+  plot_struct("Amygdala", base_size = 8) |>
+  GGally::ggmatrix_gtable() |>
+  wrap_elements()
+
+a + b + plot_layout(ncol = 1) + plot_annotation(tag_levels = "a", tag_suffix = ")")
 ```
 
+Across all structures, estimated agreement is lower than estimated consistency, reflecting differences in the average volumes estimated by the two methods (@sec-avg-shift). However, a constant scaling would not affect our primary concern, which is an estimated correlation between a regional volume and some other measure. For that reason, we focus not on agreement but instead on consistency.
+
+The intraclass correlation varies by region, with, for example, the hippocampus exhibiting estimated ICCs that are higher than the ICCs for the amygdala (@fig-vol-comparison). For reference, consider a set of standard thresholds: \<0.4: poor, \[0.4, 0.6): fair, \[0.6, 0.75): good, \[0.75, 1): excellent [@cicchetti1981]. By those, most regions have "good" to "excellent" consistency, with the estimates for the volume of the Accumbens straddling the border between "good" and "fair". However, estimates for the Amygdala are well below the threshold for "fair", being around only 0.2 for both left and right hemispheres. All intraclass correlations are shown in @tbl-iccs.
+
+Given the low intraclass correlations observed for the amygdala, there is concern that a reported relationship between amygdala volume and a participant characteristic may not persist when the volume is estimated by another reasonable approach. At least two kinds of issues could arise. First, lower consistency could make it more likely that one but not both methods leads to significant correlations. Second, lower consistency could make it more likely that the two methods produce significant correlations that go in opposite directions.
+
 ```{r}
-#| output: false
-avg_years_between_eruptions <- mean(diff(eruptions[-n_eruptions]))
-avg_years_between_eruptions
+#| label: fig-sm-errors
+#| fig-cap: "Effects of Low Measurement Consistency. The left panel shows the proportion of simulated experiments where both measures are significantly correlated with an outcome but in opposite directions. The right panel shows the proportion of simulated experiments where one method produces a non-significant correlation and the other produces a correlation whose p-value is between 0.025 and 0.05. Ribbons span posterior 95% highest density interval given simulated experiments. rho: assumed true correlation. icc: assumed ICC between measures of volume."
+
+targets::tar_load(c(icc_data2))
+# a <- sm_data |>
+#   ggplot(aes(x=N, y=error)) +
+#   ylim(0,NA) +
+#   facet_wrap(~type, scales = "free", labeller = label_both) +
+#   geom_point() +
+#   geom_line(linetype="dashed") +
+#   geom_function(
+#     data=transform(sm_data, type="S"),
+#     fun = type_s_r) +
+#   geom_function(
+#     data=transform(sm_data, type="II"),
+#     fun = \(n) 1 - pwr::pwr.r.test(n, r=0.1)$power) +
+#   geom_function(
+#     data=transform(sm_data, type="M"),
+#     fun = type_m_r)
+
+icc_data2 |>
+  mutate(across(c(icc, rho), factor)) |>
+  pivot_longer(
+    c(starts_with("dd"), starts_with("ds")), 
+    names_to = c("type", "level"), 
+    names_sep = "_",
+    values_to = "value") |>
+  mutate(
+    type = case_match(
+      type, 
+      "dd" ~ "Different\nDirection",
+      "ds" ~ "Different\nSignificance")) |>
+  pivot_wider(names_from = level) |>
+  ggplot(aes(x=N, color=icc, fill=icc)) +
+  facet_wrap(~type, scales = "free") +
+  geom_ribbon(aes(ymin=lower, ymax=upper, linetype=rho), alpha=0.2) +
+  geom_line(aes(y=med, linetype=rho)) +
+  ylim(0,NA) +
+  ylab("Proportion Simulations\n With Effect") +
+  xlab("N Participants") 
+
+# a + b + plot_layout(ncol=1) + plot_annotation(tag_levels = "a", tag_suffix = ")")
 ```
 
-Based on data up to and including 1971, eruptions on La Palma happen every `r round(avg_years_between_eruptions, 1)` years on average.
+To estimate how often these issues may occur, simulations were performed. In each simulation, datasets with two estimates of volume and a third outcome variable were generated such that the two volume estimates had an expected ICC and the true volume had a given correlation with the outcome variable. The estimated volumes were then tested for a correlation with the outcome, and the process was repeated for several ICCs and sample sizes. In all simulations, the true correlation was set to 0.1, a value that is typical for neuroimaging research [@marek_reproducible_2022].
 
-Studies of the magma systems feeding the volcano, such as @marrero2019, have proposed that there are two main magma reservoirs feeding the Cumbre Vieja volcano; one in the mantle (30-40km depth) which charges and in turn feeds a shallower crustal reservoir (10-20km depth).
+With lower consistency, the two methods are more likely to produce estimates of correlation that are on opposite sides of significance thresholds (@fig-sm-errors). For example, with consistency near the value that was estimated for the amygdala volumes (0.2), around 24% of experiments with 50 participants may entail one method resulting in a $p$-value that is greater than 0.05 and the other method having a $p$-value between 0.025 and 0.05. In cases where both methods are significant at the 0.05 level, around 30% of experiments would result in correlations that go in opposite directions.
 
-Eight eruptions have been recorded since the late 1400s (@fig-timeline).
+To assess how often these issues could occur in practice, we returned to the UKB. We extracted the "Cognitive" factors using the FMRIB UKBiobank Normalisation, Parsing And Cleaning Kit [@mccarthy2023].
 
-Data and methods are discussed in @sec-data-methods.
+```{r}
+targets::tar_load(cog_dif_sig)
+targets::tar_load(cog_dif_dir)
 
-Let $x$ denote the number of eruptions in a year. Then, $x$ can be modeled by a Poisson distribution
+a <- cog_dif_sig |>
+  mutate(estimate = abs(estimate)) |>
+  filter(abs(estimate) > 0.05) |>
+  ggplot(aes(x=N)) +
+  geom_line(aes(group=predictor, y=ds_med, color=estimate), alpha=0.2) +
+  scale_color_viridis_c(option="turbo")
+
+
+b <- cog_dif_dir |>
+  mutate(estimate = abs(estimate)) |>
+  filter(abs(estimate) > 0.05) |>
+  ggplot(aes(x=N, y=s)) +
+  geom_line(aes(group=predictor, color=estimate), alpha=0.2) +
+  scale_color_viridis_c(option="turbo")
+
+```
+
+# Discussion
+
+We explored consistency of subcortical volumes within the UK Biobank [@alfaro-almagro2018], observing low reliability between measures of the Amygdala. Simulations revealed that, through low reliability alone, two measures of volume may suggest opposite conclusions in approximately 25% of studies in which both are significant, and the two methods may have different significance in 20% of studies. Finally, we test this within the UKB, finding that there are differences in the magnitude of estimated relationships between subcortical volumes and psychosocial variables when the volumes are estimated by different methods, but the signs of the and the two methods could lead to opposing conclusions.
+
+In general, although the lack of consistency may be troubling, note that values may relate to several factors beyond just the method. That is, estimated volumes can differ substantially within an individual due to factors like site, scanner, positioning, software version, and even time [@hedges2022; @du2021; @mcguire2017; @yang2016; @liu2020; @mulder2014; @morey2010]. In particular, one small study (N=23) suggested that the ICC for amygdala volumes estimated by FIRST, across repeated scans of the same individual, may be as low as 0.6 [@morey2010]. If these factors affect the two methods differently, then we may expect that they could contribute to the discordance between the two methods.
+
+FIRST and FreeSurfer are two of the most popular methods for estimating subcortical volumes, but they are not the only tools available. Other methods exist [e.g., @akhondi-asl2013], and some of the newer techniques are based on deep-learning approaches [e.g., @billot2023; for review, see @singh2021]. These appear to have better correspondence with manual segmentation and so may be expected to have higher ICC to each other.
+
+# Supplementary Materials {#sec-supplements}
+
+## Differences in Average Volumes {#sec-avg-shift}
+
+Some of subcortical volumes appear to be systematically different when estimated by FIRST and FreeSurfer (@fig-biases-perc), replicating previous findings in other datasets [@gomez-ramirez2022].
+
+```{r}
+#| label: fig-biases-perc
+#| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement (1.96 standard deviations), with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3. Left and right structures plotted together. Biases in the average are indicated by the central ribbon excluding zero. The differences (y-axis) are expressed as a percentage of the average difference. For raw values, see Supplementary Materials."
+#| fig-height: 6
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .average = (FIRST + FreeSurfer) / 2,
+    .difference = (FIRST - FreeSurfer) / .average * 100
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference)) +
+  facet_wrap(~Structure, scales = "free_x") +
+  geom_ba() +
+  scattermore::geom_scattermore(alpha=0.1, pointsize = 5) + 
+  xlab("Average (FIRST + ASEG)/2") +
+  ylab("Difference (FIRST - ASEG)/Average %") 
+```
+
+## Intraclass Correlation {#sec-icc-models}
+
+The intraclass correlation was based on a 2-way mixed linear model [@mcgraw1996], in which the volume, $x$, for the region of participant $i$ as measured by method $k$ was treated as equal to the sum of an intercept, $\nu$, the "true" volume, $\lambda$, a method bias $c_k$, and an error term, $\epsilon$
 
 $$
-p(x) = \frac{e^{-\lambda} \lambda^{x}}{x !}
-$$ {#eq-poisson}
+\begin{aligned}
+x_{ik} &= \nu + \lambda_i + c_k + \epsilon_{ik} \\
+\sum_k c_k &= 0 \\
+\lambda_i &\sim N(0,\sigma_\lambda^2) \\
+\epsilon_{ik} &\sim N(0, \sigma_\epsilon^2)
+\end{aligned}
+$$
 
-where $\lambda$ is the rate of eruptions per year. Using @eq-poisson, the probability of an eruption in the next $t$ years can be calculated.
+Note that the $c_k$ terms are assumed fixed, and their variance is given by $\sigma_c^2=\sum_k c_k^2/(k-1)$.
 
-| Name                 | Year   |
-| -------------------- | ------ |
-| Current              | 2021   |
-| Teneguía             | 1971   |
-| Nambroque            | 1949   |
-| El Charco            | 1712   |
-| Volcán San Antonio   | 1677   |
-| Volcán San Martin    | 1646   |
-| Tajuya near El Paso  | 1585   |
-| Montaña Quemada      | 1492   |
+Important assumptions of this include that the two methods are expected to have the same mean-squared error, and that the errors for the two methods are not correlated (e.g., there are not some participants for which the methods tend to do better than others).
 
-: Recent historic eruptions on La Palma {#tbl-history}
+The consistency version of the ICC, $ICC(C,1)$, and the absolute agreement, $ICC(A,1)$ were given as fractions of variance
 
-@tbl-history summarises the eruptions recorded since the colonization of the islands by Europeans in the late 1400s.
+$$
+\begin{aligned}
+ICC(C,1) & = \frac{\sigma_\lambda^2}{\sigma_\lambda^2 + \sigma_\epsilon^2} \\
+ICC(A,1) & = \frac{\sigma_\lambda^2}{\sigma_\lambda^2 + \sigma_\epsilon^2 + \sigma_c^2}
+\end{aligned}
+$$
 
-![Map of La Palma](images/la-palma-map.png){#fig-map}
+## Measurement Noise
 
-La Palma is one of the west most islands in the Volcanic Archipelago of the Canary Islands (@fig-map). 
+Using the model from the previous supplementary section, we can build a measurement noise model. Call the final target for which we hope to find a relationship with volume $y$. The relationship between that value and the volume was given by an ordinary linear regression with error $\delta$.
 
-{{< embed notebooks/explore-earthquakes.qmd#fig-spatial-plot >}}
+$$
+\begin{aligned}
+y_i & = \beta_0 + \beta_1\lambda_i + \delta_i \\
+\delta_i & \sim N(0, \sigma_\delta^2) \\
+\end{aligned}
+$$
 
-@fig-spatial-plot shows the location of recent Earthquakes on La Palma.
+But since we do not know $\lambda$, the volumes estimated by the tools are used instead, changing the regression coefficient.
 
-## Data & Methods {#sec-data-methods}
+$$
+y_i = \beta_0 + \tilde{\beta_1}x_i + \delta_i \\
+$$
 
-## Conclusion
+Dilution occurs because the coefficient $\tilde{\beta_1}$ estimated in this model tends to be closer zero, decreased by a factor related to the ICC [@frost2000].
 
-## References {.unnumbered}
+$$
+\tilde{\beta_1} = \beta_1\frac{\sigma_\lambda^2}{\sigma_\lambda^2 + \sigma_\epsilon^2}
+$$
 
-:::{#refs}
+Correspondingly, the desired correlation, $\rho=cor(y,\lambda)$, will also be biased.
 
+$$
+\begin{aligned}
+\beta_1 & = \rho\frac{\sigma_\delta}{\sigma_\lambda} \\
+\tilde{\beta_1} & = \tilde{\rho}\frac{\sigma_\delta}{sd(x)} \\ 
+& =  \tilde{\rho} \frac{\sigma_\delta}{\sqrt{\sigma_\epsilon^2 + \sigma_\lambda^2}} \\
+&  \implies \\
+\rho \frac{\sigma_\delta}{\sigma_\lambda} &  = \tilde{\rho}\frac{\sigma_\delta}{\sqrt{\sigma_\epsilon^2+\sigma_\lambda^2}} \frac{\sigma_\lambda^2 + \sigma_\epsilon^2}{\sigma_\lambda^2} \\
+&  \implies \\
+\rho & = \tilde{\rho} \frac{\sqrt{\sigma_\epsilon^2+\sigma_\lambda^2}}{\sigma_\lambda }
+\end{aligned}
+$$
+
+## Biases
+
+```{r}
+#| label: fig-biases
+#| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement (1.96 standard deviations), with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3. Left and right structures plotted together. Biases in the average are indicated by the central ribbon excluding zero."
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .difference = FIRST - FreeSurfer,
+    .average = (FIRST + FreeSurfer) / 2
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference)) +
+  facet_wrap(~Structure, scales = "free") +
+  geom_ba() +
+  scattermore::geom_scattermore(alpha=0.3, pointsize = 5) + 
+  xlab("Average ([FIRST + ASEG]/2)") +
+  ylab("Difference (FIRST - ASEG)") 
+```
+
+## Remaining Structures {#sec-other-structs}
+
+```{r}
+#| label: tbl-iccs
+#| tbl-cap: "Intraclass Correlation for Subcortical Structures. Subscripts indicate confidence intervals."
+
+ukb_vols_long |>
+  filter(stringr::str_detect(Method, "FSSUBSEG", negate=TRUE)) |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  group_nest(Hemisphere, Structure) |>
+  mutate(
+    icc = map(
+      data,
+      ~select(.x, FIRST, FreeSurfer) |>
+        irr::icc(model="twoway")),
+    lower = map_dbl(icc, pluck, "lbound"),
+    upper = map_dbl(icc, pluck, "ubound"),
+    icc = map_dbl(icc, pluck, "value"),
+    across(c(icc, lower, upper), \(x) round(x, 2)),
+    icc = glue::glue("@@{lower}@{icc}@@{upper}@"),
+    iccA = map(
+      data,
+      ~select(.x, FIRST, FreeSurfer) |>
+        irr::icc(model="twoway",type = "agreement")),
+    lower = map_dbl(iccA, pluck, "lbound"),
+    upper = map_dbl(iccA, pluck, "ubound"),
+    iccA = map_dbl(iccA, pluck, "value"),
+    across(c(iccA, lower, upper), \(x) round(x, 2)),
+    iccA = glue::glue("@@{lower}@{iccA}@@{upper}@"),
+  ) |>
+  select(Structure, Hemisphere, `ICC(C,1)`=icc, `ICC(A,1)`=iccA) |>
+  arrange(Structure) |>
+  gt::gt() |> 
+  gt::text_transform(
+    fn = subscript_formatting, 
+    locations = gt::cells_body(columns=c("ICC(C,1)", "ICC(A,1)"))
+  ) |>
+  gt::as_latex()
+```
+
+```{r gen-other-vol-figs}
+figs <- purrr::map(
+  c("Thalamus", "Putamen", "Accumbens", "Pallidum", "Caudate"), 
+  plot_struct,
+  volumes = select(ukb_vols, -ends_with("FSSUBSEG"))
+) 
+```
+
+```{r}
+#| label: fig-thalamus
+#| fig-cap: "Thalamus Volume Comparison."
+figs[[1]]
+```
+
+```{r}
+#| label: fig-putamen
+#| fig-cap: "Putamen Volume Comparison."
+figs[[2]]
+```
+
+```{r}
+#| label: fig-accumbens
+#| fig-cap: "Accumbens Volume Comparison."
+figs[[3]]
+```
+
+```{r}
+#| label: fig-pallidum
+#| fig-cap: "Pallidum Volume Comparison."
+figs[[4]]
+```
+
+```{r}
+#| label: fig-caudate
+#| fig-cap: "Caudate Volume Comparison."
+figs[[5]]
+```
+
+## Deconfounding
+
+One possible source of low ICC could be systematic inaccuracies with certain kinds of participants. For example, one of the two methods could tend to underestimate volumes when given brains that have experienced severe atrophy, which would decrease the agreement of the methods. To assess this, correlations between the amygdala volumes and the SIMPLE confounds within the UKB were calculated [@alfaro-almagro2021].
+
+Several of the correlations appeared to be non-zero (@fig-partials-amyg). However, regressing these confounds from the estimated amygdala volumes did not improve the ICCs (@tbl-iccs-deconfounded).
+
+```{r}
+#| label: fig-partials-amyg
+#| fig-cap: "Partial Correlation Between Potential Confounders and Amygdala Volume Measurements. avg: Average volume as estimated by the two regions. diff: Difference in volume as estimated by the two regions (FIRST-FreeSurfer). Note that the variable 'Head Size' corresponds to a scaling factor such that larger values imply smaller brains."
+#| fig-height: 8
+#| fig-width: 10
+targets::tar_load(partials)
+partials |> 
+  filter(Structure == "Amygdala") |>
+  ggplot(aes(x=estimate, y=term, color=response)) + 
+  geom_point() + 
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) + 
+  facet_wrap(~Hemisphere) +
+  theme(legend.position = "bottom")
+
+```
+
+```{r}
+#| label: tbl-iccs-deconfounded
+#| tbl-cap: "Intraclass Correlation After Deconfounding. Prior to calculating consistency, volumes were deconfounded by a version of the SIMPLE parameter set described by Alfaro-Almargo et al. (2021). The parameter set includes age, age^2, sex, age*sex, head size, head motion (the measure of T1 motion was used), date, and date^2, each crossed with acquisition site, as well as indicators for acquisition site. Compare to "
+
+ukb_vols |>
+  mutate(acq_day = (acq_day - min(acq_day)) |> as.numeric()) |>
+  na.omit() |>
+  mutate(
+    age2 = age^2,
+    acq_day2 = acq_day^2,
+    across(
+      c(age, age2, t1_motion, head_size, acq_day, acq_day2), 
+      \(x) (x - median(x)) / mad(x)),
+    .by = site) |>
+  pivot_longer(
+    c(contains("Left"), contains("Right")),
+    names_to = c("Structure", "Method"),
+    names_pattern = "([[:print:]]+)_(FIRST|FreeSurfer)",
+    values_to = "Volume") |>
+  mutate(
+    m = mean(Volume),
+    Volume = resid(lm(Volume ~ site + (age*sex):site + age2:site + t1_motion:site + head_size:site + acq_day:site + acq_day2:site)),
+    Volume = Volume + m,
+    .by = c(Structure, Method)) |>
+  select(-m) |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  separate(Structure, c("Hemisphere", "Structure")) |>
+  group_nest(Hemisphere, Structure) |>
+  mutate(
+    icc = map(
+      data,
+      ~select(.x, FIRST, FreeSurfer) |>
+        irr::icc(model="twoway")),
+    lower = map_dbl(icc, pluck, "lbound"),
+    upper = map_dbl(icc, pluck, "ubound"),
+    icc = map_dbl(icc, pluck, "value"),
+    across(c(icc, lower, upper), \(x) round(x, 2)),
+    icc = glue::glue("@@{lower}@{icc}@@{upper}@"),
+    iccA = map(
+      data,
+      ~select(.x, FIRST, FreeSurfer) |>
+        irr::icc(model="twoway",type = "agreement")),
+    lower = map_dbl(iccA, pluck, "lbound"),
+    upper = map_dbl(iccA, pluck, "ubound"),
+    iccA = map_dbl(iccA, pluck, "value"),
+    across(c(iccA, lower, upper), \(x) round(x, 2)),
+    iccA = glue::glue("@@{lower}@{iccA}@@{upper}@"),
+  ) |>
+  select(Structure, Hemisphere, `ICC(C,1)`=icc, `ICC(A,1)`=iccA) |>
+  arrange(Structure) |>
+  gt::gt() |> 
+  gt::text_transform(
+    fn = subscript_formatting, 
+    locations = gt::cells_body(columns=c("ICC(C,1)", "ICC(A,1)"))
+  )|>
+  gt::as_latex()
+
+```
+
+### Adjusting for ICV
+
+When reporting differences in volume between groups, it is common to adjust for some measure of either head size or cerebral volume [@barnes_head_2010; @mathalon_correction_1993; @voevodskaya_effects_2014]. Adjusting by intracranial volume as estimated by FreeSurfer did not improve the intraclass correlations @tbl-adjust.
+
+```{r}
+#| label: tbl-adjust
+#| tbl-cap: "Consistency of Volumes when Adjusting by Intracranial Volume. Adjustments were done by residualizing with respect to ICV."
+
+ukb_vols_long |>
+  filter(stringr::str_detect(Method, "FSSUBSEG", negate=TRUE)) |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+        across(
+            c(ends_with("FreeSurfer"), ends_with("FIRST")), 
+            \(x) mean(x) + resid(lm(x ~ icv)))) |>
+  group_nest(Hemisphere, Structure) |>
+  mutate(
+    icc = map(
+      data,
+      ~select(.x, FIRST, FreeSurfer) |>
+        irr::icc(model="twoway")),
+    lower = map_dbl(icc, pluck, "lbound"),
+    upper = map_dbl(icc, pluck, "ubound"),
+    icc = map_dbl(icc, pluck, "value"),
+    across(c(icc, lower, upper), \(x) round(x, 2)),
+    icc = glue::glue("@@{lower}@{icc}@@{upper}@"),
+    iccA = map(
+      data,
+      ~select(.x, FIRST, FreeSurfer) |>
+        irr::icc(model="twoway",type = "agreement")),
+    lower = map_dbl(iccA, pluck, "lbound"),
+    upper = map_dbl(iccA, pluck, "ubound"),
+    iccA = map_dbl(iccA, pluck, "value"),
+    across(c(iccA, lower, upper), \(x) round(x, 2)),
+    iccA = glue::glue("@@{lower}@{iccA}@@{upper}@"),
+  ) |>
+  select(Structure, Hemisphere, `ICC(C,1)`=icc, `ICC(A,1)`=iccA) |>
+  arrange(Structure) |>
+  gt::gt() |> 
+  gt::text_transform(
+    fn = subscript_formatting, 
+    locations = gt::cells_body(columns=c("ICC(C,1)", "ICC(A,1)"))
+  ) |>
+  gt::as_latex()
+
+```
+
+##  {#sec-icc-relations}
+
+```{r}
+#| eval: false
+#| label: fig-age
+#| fig-cap: "Difference in Estimated Subcortical Volume by Age. Horizontal lines show average difference and limits of agreement, with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3."
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .difference = FIRST - FreeSurfer,
+    .average = (FIRST + FreeSurfer) / 2
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(x = age, y = .difference)) +
+  facet_wrap(~Structure, scales = "free") +
+  geom_ba() +
+  ggdist::stat_gradientinterval() +
+  xlab("Age (Yrs)") +
+  ylab("Difference (FIRST - ASEG)") 
+
+```
+
+```{r}
+#| eval: false
+#| label: fig-sex
+#| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement, with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3. Color indicates reported sex."
+#| fig-height: 6
+
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .difference = FIRST - FreeSurfer,
+    .average = (FIRST + FreeSurfer) / 2
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference, color=sex)) +
+  facet_wrap(~Structure, scales = "free") +
+  geom_ba() +
+  scattermore::geom_scattermore(alpha=0.1, pointsize = 2) + 
+  scale_color_viridis_d(option="inferno", end = 0.8) +
+  scale_fill_discrete(guide = "none") +
+  xlab("Average (FIRST + ASEG)/2") +
+  ylab("Difference (FIRST - ASEG)")
+```
+
+```{r}
+#| label: fig-position
+#| fig-cap: "Correlations Between Participant Position and either the Average (avg) or Difference (diff) of Volume Estimates. Error bars span 95% confidence intervals. iso: indicates whether the table was placed at a fixed location."
+#| fig-height: 6
+#| eval: false
+
+positions <- arrow::open_dataset("data/ukb26883_bulk.parquet") |> 
+  select(
+    f.eid, 
+    site=f.54.2.0,
+    f.25733.2.0,
+    table_position=f.25759.2.0,
+    x_position=f.25756.2.0,
+    y_position=f.25757.2.0,
+    z_position=f.25758.2.0) |>
+  collect() |>
+  mutate(
+    across(everything(), as.numeric),
+    f.eid = as.character(f.eid)) |>
+  filter(!is.na(f.25733.2.0)) |>
+  select(-f.25733.2.0) |>
+  na.omit() |>
+  mutate(iso = if_else(table_position == -1042, TRUE, FALSE)) |>
+  pivot_longer(c(-f.eid, -iso, -site))
+
+
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .difference = FIRST - FreeSurfer,
+    .average = (FIRST + FreeSurfer) / 2
+  ) |>
+  right_join(positions, relationship = "many-to-many") |>
+  na.omit() |>
+  summarise(
+    avg = list(cor.test(.average, value, method = "pearson") |> broom::tidy()),
+    diff = list(cor.test(.difference, value, method = "pearson") |> broom::tidy()),
+    .by = c(Structure, iso, name)
+  ) |>
+  unnest(c(avg, diff), names_sep = "_") |>
+  na.omit() |>
+  select(-ends_with("method"), -ends_with("alternative"), -ends_with("statistic"), -ends_with("p.value"), -ends_with("parameter")) |>
+  pivot_longer(
+    c(starts_with("avg_"), starts_with("diff_")), 
+    names_to = c("type", "param"), 
+    names_sep = "_") |>
+  pivot_wider(names_from = param) |> 
+  ggplot(aes(x=Structure, y=estimate, color=iso)) + 
+  facet_wrap(~name+type) + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  geom_point() +
+  scale_y_continuous("Correlation", breaks = c(-0.1, 0, 0.1), labels = c(-0.1, 0, 0.1))+
+  coord_flip() 
+
+
+```
+
+```{r}
+#| eval: false
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .difference = FIRST - FreeSurfer,
+    .average = (FIRST + FreeSurfer) / 2,
+    across(where(is.factor), as.numeric)
+  ) |>
+  summarise(
+    across(
+      c(age, t1_motion, head_size, sex), 
+      \(x) cor.test(.difference, x) |> broom::tidy() |> list(),
+      .names = "{.col}_diff"),
+    across(
+      c(age, t1_motion, head_size, sex), 
+      \(x) cor.test(.average, x) |> broom::tidy() |> list(),
+      .names = "{.col}_avg"),
+    .by = c(Hemisphere, Structure)
+  ) |>
+  pivot_longer(c(ends_with("diff"), ends_with("avg"))) |>
+  unnest(value) |>
+  extract(
+    name, 
+    c("predictor", "response"), 
+    regex = "([[:print:]]+)_(diff|avg)")  |> 
+  mutate(p.value = p.adjust(p.value, "holm"), sig=p.value < 0.05) |> 
+  ggplot(aes(x=estimate, y=interaction(Structure,Hemisphere), color=response)) + 
+  geom_point(aes(shape=sig)) + 
+  geom_errorbarh(aes(xmin=conf.low, xmax=conf.high)) + 
+  facet_wrap(~predictor)
+```
+
+```{r}
+#| eval: false
+ukb_vols_long |>
+  filter(stringr::str_detect(Structure, "Amy")) |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .difference = FIRST - FreeSurfer,
+    .average = (FIRST + FreeSurfer) / 2,
+    acq_day=(acq_day - min(acq_day)) |> as.numeric()) |>
+  na.omit() |>
+  mutate(
+    age2 = age^2,
+    acq_day2 = acq_day^2,
+    across(
+      c(age, age2, t1_motion, head_size, acq_day, acq_day2), 
+      \(x) (x - median(x)) / mad(x)),
+    .by = site) |>
+  summarise(
+    diff = lm(.difference ~ site + (age*sex):site + age2:site + t1_motion:site + head_size:site + acq_day:site + acq_day2:site) |> broom::tidy() |> list(),
+    avg = lm(.average ~ site + (age*sex):site + age2:site + t1_motion:site + head_size:site + acq_day:site + acq_day2:site) |> broom::tidy() |> list(),
+    .by = c(Hemisphere, Structure)
+  ) |>
+  pivot_longer(c(ends_with("diff"), ends_with("avg")), names_to = "response") |>
+  unnest(value) |>
+  filter(stringr::str_detect(term, "(Intercept)", TRUE)) |>
+  ggplot(aes(x=estimate, y=term, color=response)) + 
+  geom_point() + 
+  geom_errorbarh(aes(xmin=estimate-2*std.error, xmax=estimate+2*std.error)) + 
+  facet_wrap(~Structure+Hemisphere)
+```
+
+# References {.unnumbered}
+
+::: {#refs}
 :::
