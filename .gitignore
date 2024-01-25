@@ -11,3 +11,13 @@
 .Rdata
 .httr-oauth
 .DS_Store
+
+_targets
+data
+index
+index_files
+images/
+*html
+
+/_freeze
+
