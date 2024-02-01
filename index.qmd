@@ -1,11 +1,12 @@
 ---
-title: Title TK
+title: Comparing Automated Subcortical Volume Estimation Methods; Amygdala Volumes Estimated by FSL and FreeSurfer have Low Consistency.
 author:
   - name: Patrick Sadil
     corresponding: true
     email: psadil1@jh.edu
     affiliations:
       - Johns Hopkins Bloomberg School of Public Health
+  - name: [others TBD]
   - name: Martin Lindquist
     corresponding: false
     roles: []
@@ -36,36 +37,28 @@ library(purrr)
 source(here::here("R/figures.R"))
 targets::tar_load(ukb_vols_long)
 targets::tar_load(ukb_vols) 
+n_for_sim <- targets::tar_read(amyg_vols) |>
+  dplyr::distinct(f.eid) |>
+  dplyr::n_distinct()
 
-subscript_formatting <- function(x){
-  stringr::str_replace_all(
-    x,
-    pattern = "@@",
-    replacement = "$_{") |>
-    stringr::str_replace_all(
-      "@",
-      "}$") 
-}
 ```
 
 # Introduction
 
-Within neuroimaging research, structural measures are valued in part for their epistemic validity -- that is, the value of the measure is thought to be a property that is distinct from the method by which it was collected, and other methods could measure the same value. Put another way, there are clear "gold standard" to which the properties derived from structural imaging can be compared, such as postmortem dissection and assessment. These gold standards further provide an objective way to assess novel computational techniques, and so the performance of techniques can be compared to each other objectively.
+Regional volumes of subcortex have been proposed as biomarkers for several psychopathologies. For example, the volume of the amygdala could serve as a biomarker for Alzheimer's, depression symptom severity in young adults, bipolar disorder in youth, migraine frequency, and chronic pain [@daftary_relationship_2019; @khatri_alzheimers_2022; @pfeifer_meta-analysis_2008; @liu_hippocampus_2017; @vachon-presseau_corticolimbic_2016]. As a biomarker, subcortical volumes are advantageous for being interpretable (given that the structure is thought to play a role in many cognitive functions), explainable (hypotrophy or hypertrophy are both easily described to healthcare providers and patients), and readily available. The availability comes from being able to estimate the regional volumes from any structural image with several automated algorithms.
 
-For estimating regional subcortical volumes, two automated techniques are popular: FMRIB's Integrated Registration and Segmentation Tool (FIRST) and FreeSurfer's Automated Segmentation (ASEG) [@patenaude2007; @patenaude2011; @fischl2012]. Both techniques exhibit high consistency with manual segmentation in healthy adults and some clinical populations [@hsu2002; @tae2008; @morey2009; @pardoe2009; @dewey2010; @lehmann2010; @doring2011], with some regional variability. For the hippocampus, FreeSurfer has been reported as having higher intraclass correlations than FSL [@doring2011]. Neither method appears to have worse reliability than manual segmentation [@mulder2014a]. For the amygdala, which method performs better depends on the metric [@morey2009]. FIRST may better match manual segmentation on the putamen, and the methods perform similarly on the caudate [@perlaki2017]. These comparisons may not hold in other populations (e.g., pediatric, elderly), given that performance of the automated techniques is not consistently high across populations [@schoemaker2016; @kim2012; @sánchez-benavides2010].
+For estimating regional subcortical volumes, two automated techniques are popular: FMRIB's Integrated Registration and Segmentation Tool (FIRST) from the FMRIB Software Library (FSL) and FreeSurfer's Automated Segmentation (ASEG) [@patenaude2007; @patenaude2011; @fischl2012]. Both techniques exhibit high consistency with manual segmentation in healthy adults and some clinical populations [@hsu2002; @tae2008; @morey2009; @pardoe2009; @dewey2010; @lehmann2010; @doring2011], although there is variability across regions and between methods. For segmenting the hippocampus, FreeSurfer has been reported as having higher intraclass correlations than FSL [@doring2011], though neither method appears to have worse reliability (across repeated scans) than manual segmentation [@mulder_hippocampal_2014]. For the putamen, FSL may better match manual segmentation, and the methods perform similarly on the caudate [@perlaki2017]. For the amygdala, which method performs better depends on the metric [@morey2009]. These comparisons may not hold generalize to other populations (e.g., pediatric, elderly), given that performance of the automated techniques is not consistently high across populations [@schoemaker2016; @kim2012; @sánchez-benavides2010; @zhou_charting_2021].
 
-While comparisons against manual segmentation help identify which automated method performs better, as a practical matter the literature contains reports in which both tools have been used, and it remains less clear how the two methods compare to each other. In an elderly population, FreeSurfer tends to estimate volumes that are larger than those estimated by FIRST [@gomez-ramirez2022]. Constant shifts could be important for establishing norms but will matter less for the development of biomarkers (e.g., correlation between volume and susceptibility to a disease).
+While comparisons to manual segmentation could identify which methods produce the best estimates of volume for a given study, it remains less clear how the two methods compare to each other, and whether the there is consistency across the two methods. In particular, it remains unclear whether the consistency of the two methods can lead to situations where they produce different results. We were primarily concerned with research that would use estimates of volume as a biomarker by, for example, correlating volume with a health-related outcome.
 
-In this study, we assessed these differences, exploring the extent to which they are systematic or unsystematic. In particular, we were interested in determining whether researchers who primarily use one set of measurements will reach the same conclusion as researchers who use the other.
+# Methods and Results
 
-# Results
-
-Data from the UKBiobank were used (downloaded Nov 2023), containing `r dplyr::n_distinct(ukb_vols$f.eid)` participants with usable data [@alfaro-almagro_image_2018]. Of primary interest were the subcortical volumes as estimated by FreeSurfer ASEG (Category 190) and FAST (Category 1101). For details on ICC calculations, see @sec-icc-models.
+First, we looked at the consistency of subcortical volumes between FSL and FreeSurfer using data from the UK Biobank [@alfaro-almagro_image_2018]. The data were downloaded Jan 2024 and contained `r dplyr::n_distinct(ukb_vols$f.eid)` participants with usable anatomical data (Category 190: FreeSurfer ASEG; Category 1102: FSL FIRST). For details on intraclass correlation calculations, see @sec-icc-models. Intervals (e.g., 95% confidence intervals, 95% equal-tailed intervals) are displayed in subscripts, as recommended by @louis_effective_2008.
 
 ```{r ukbv}
 #| label: fig-vol-comparison
-#| fig-cap: "Comparisons of Subcortical Volumes Estimated by FIRST and FreeSurfer for two example regions a) Hippocampus and b) Amygdala. For additional regions, see Supplementary Materials."
-#| fig-height: 8
+#| fig-cap: "Comparisons of Subcortical Volumes Estimated by FSL and FreeSurfer for two example regions a) Hippocampus and b) Amygdala. For remaining subcortical regions, see @tbl-iccs."
+#| fig-height: 7
 
 a <- ukb_vols |>
   plot_struct("Hippocampus", base_size = 8) |>
@@ -76,37 +69,32 @@ b <- ukb_vols |>
   GGally::ggmatrix_gtable() |>
   wrap_elements()
 
-a + b + plot_layout(ncol = 1) + plot_annotation(tag_levels = "a", tag_suffix = ")")
+a + b + 
+  plot_layout(ncol = 1) + 
+  plot_annotation(tag_levels = "a", tag_suffix = ")") & 
+  theme(legend.position = "bottom")
 ```
 
-Across all structures, estimated agreement is lower than estimated consistency, reflecting differences in the average volumes estimated by the two methods (@sec-avg-shift). However, a constant scaling would not affect our primary concern, which is an estimated correlation between a regional volume and some other measure. For that reason, we focus not on agreement but instead on consistency.
+Across all structures, estimated agreement was lower than estimated consistency, reflecting differences in the average volumes estimated by the two methods (@sec-avg-shift). However, a shift that is constant across participants would not affect our primary focus, which was related to estimated correlations between regional volumes and some other measure. For that reason, we focus not on agreement but instead on consistency.
 
-The intraclass correlation varies by region, with, for example, the hippocampus exhibiting estimated ICCs that are higher than the ICCs for the amygdala (@fig-vol-comparison). For reference, consider a set of standard thresholds: \<0.4: poor, \[0.4, 0.6): fair, \[0.6, 0.75): good, \[0.75, 1): excellent [@cicchetti1981]. By those, most regions have "good" to "excellent" consistency, with the estimates for the volume of the Accumbens straddling the border between "good" and "fair". However, estimates for the Amygdala are well below the threshold for "fair", being around only 0.2 for both left and right hemispheres. All intraclass correlations are shown in @tbl-iccs.
+The consistency varies by region, with, for example, the hippocampus exhibiting estimated intraclass correlations that are higher than those for the amygdala (@fig-vol-comparison). To interpret the intraclass correlations, consider the categories provided by @cicchetti1981: <0.4: poor, [0.4, 0.6): fair, [0.6, 0.75): good, [0.75, 1): excellent. Using those categories, most regions have "good" to "excellent" consistency across the methods (all intraclass correlations are shown in @tbl-iccs). However, the consistency for volumes of the amygdala are well below the threshold for "fair", around only $_{0.24}0.24_{0.25}$ and $_{0.21}0.22_{0.23}$ for the left and right hemispheres (ranges indicate 95% confidence intervals).
 
-Given the low intraclass correlations observed for the amygdala, there is concern that a reported relationship between amygdala volume and a participant characteristic may not persist when the volume is estimated by another reasonable approach. At least two kinds of issues could arise. First, lower consistency could make it more likely that one but not both methods leads to significant correlations. Second, lower consistency could make it more likely that the two methods produce significant correlations that go in opposite directions.
+Estimated volumes can be affected by experimental factors like site, scanner, positioning, software version, and time [@hedges2022; @du2021; @mcguire2017; @yang2016; @liu2020; @mulder_hippocampal_2014; @morey2010]. The amygdala has been reported to be particularly challenging to segment, with one small study (N=23) reporting an intraclass correlation across repeated scans of the same individual for amygdala volumes estimated by FIRST of 0.6 [@morey2010]. Several confounding factors were correlated with estimates of amygdalar volume (@fig-partials-amyg). Consistency between the methods was not improved by regressing these factors from the estimates of volume (@sec-confounds, @tbl-iccs-deconfounded, @tbl-adjust).
+
+With such low consistency for the amygdala, there is concern that a reported relationships involving amygdala volumes may depend on which method is used for estimating the volume, a choice that may be considered arbitrary. At least two kinds of issues could arise. First, lower consistency could make it more likely that one but not both methods leads to significant correlations. Second, lower consistency could make it more likely that the two methods produce significant correlations that go in opposite directions. 
 
 ```{r}
 #| label: fig-sm-errors
-#| fig-cap: "Effects of Low Measurement Consistency. The left panel shows the proportion of simulated experiments where both measures are significantly correlated with an outcome but in opposite directions. The right panel shows the proportion of simulated experiments where one method produces a non-significant correlation and the other produces a correlation whose p-value is between 0.025 and 0.05. Ribbons span posterior 95% highest density interval given simulated experiments. rho: assumed true correlation. icc: assumed ICC between measures of volume."
+#| fig-cap: "Effects of Low Measurement Consistency. The left panel show the proportion of simulated experiments where one method produces a non-significant correlation and the other produces a correlation whose p-value is between 0.025 and 0.05. The right panels show the proportion of simulated experiments where both measures are significantly correlated with an outcome but in opposite directions. Proportions are shown with color [@swihart_lasagna_2010]. a) Simulated Data. Rows (rho) indicate assumed true correlation. icc: assumed intraclass correlation between measures of volume. b) Simulated Experiments with UKB. Each row corresponds to a non-image derivated phenotype from the UKB. The value in parentheses is the absolute correlation of the variable with the average volumes of the left amygdala (average across methods)."
+#| fig-width: 8
+#| fig-height: 6
 
 targets::tar_load(c(icc_data2))
-# a <- sm_data |>
-#   ggplot(aes(x=N, y=error)) +
-#   ylim(0,NA) +
-#   facet_wrap(~type, scales = "free", labeller = label_both) +
-#   geom_point() +
-#   geom_line(linetype="dashed") +
-#   geom_function(
-#     data=transform(sm_data, type="S"),
-#     fun = type_s_r) +
-#   geom_function(
-#     data=transform(sm_data, type="II"),
-#     fun = \(n) 1 - pwr::pwr.r.test(n, r=0.1)$power) +
-#   geom_function(
-#     data=transform(sm_data, type="M"),
-#     fun = type_m_r)
+targets::tar_load(cog_dif_sig)
+targets::tar_load(cog_dif_dir)
 
-icc_data2 |>
+a <- icc_data2 |>
+  filter(icc < 0.5) |>
   mutate(across(c(icc, rho), factor)) |>
   pivot_longer(
     c(starts_with("dd"), starts_with("ds")), 
@@ -117,81 +105,100 @@ icc_data2 |>
     type = case_match(
       type, 
       "dd" ~ "Different\nDirection",
-      "ds" ~ "Different\nSignificance")) |>
+      "ds" ~ "Different\nSignificance"),
+    Effect = factor(type, levels = c("Different\nSignificance", "Different\nDirection"))) |>
   pivot_wider(names_from = level) |>
-  ggplot(aes(x=N, color=icc, fill=icc)) +
-  facet_wrap(~type, scales = "free") +
-  geom_ribbon(aes(ymin=lower, ymax=upper, linetype=rho), alpha=0.2) +
-  geom_line(aes(y=med, linetype=rho)) +
-  ylim(0,NA) +
-  ylab("Proportion Simulations\n With Effect") +
-  xlab("N Participants") 
+  rename(ICC=icc) |>
+  ggplot(aes(x=N, y=rho, fill=med)) +
+  facet_grid(ICC~Effect, labeller = label_both) +
+  geom_raster() +
+  scale_fill_viridis_c(
+    option="turbo",
+    name="Estimated\nProportion",
+    limits = c(0, 0.5)) +
+  scale_x_continuous(
+    "N Participants",
+    breaks = c(0, 50, 100),
+    labels = c(0, 50, 100)) +
+  ggtitle("Artificial Data") +
+  theme_gray(base_size = 9)
 
-# a + b + plot_layout(ncol=1) + plot_annotation(tag_levels = "a", tag_suffix = ")")
+
+b <- left_join(
+  cog_dif_sig |>
+    select(predictor, N, ds_med, Hemisphere),
+  cog_dif_dir |>
+    mutate(estimate = abs(estimate)),
+  by = join_by(predictor, N, Hemisphere)) |>
+  filter(stringr::str_detect(Hemisphere, "Left")) |>
+  na.omit() |>
+  pivot_longer(
+    c(starts_with("dd"), starts_with("ds")), 
+    names_to = c("Effect", "level"), 
+    names_sep = "_",
+    values_to = "value") |>
+  mutate(
+    Effect = case_match(
+      Effect, 
+      "dd" ~ "Different\nDirection",
+      "ds" ~ "Different\nSignificance"),
+    Effect = factor(Effect, levels = c("Different\nSignificance", "Different\nDirection")),
+    predictor = stringr::str_sub(predictor, 3),
+    rho = glue::glue("({round(estimate, digits = 2)})"),
+    Variable = interaction(predictor, rho, sep = " ", lex.order=FALSE)) |>
+  ggplot(aes(x=N, y=Variable, fill=value)) +
+  facet_wrap(~Effect, labeller = label_both, ncol=2) +
+  geom_raster() +
+  scale_fill_viridis_c(
+    option="turbo",
+    name = "Estimated\nProportion",
+    limits = c(0,0.5)) +
+  ylab("Cognitive Variable (rho)") +
+  scale_x_continuous(
+    "N Participants",
+    breaks = c(0, 50, 100),
+    labels = c(0, 50, 100)) +
+  ggtitle("UKB")  +
+  theme_gray(base_size = 9)
+
+a + b + plot_layout(ncol=2, guides = "collect") + plot_annotation(tag_levels = "a", tag_suffix = ")") & theme(legend.position = "bottom")
 ```
 
-To estimate how often these issues may occur, simulations were performed. In each simulation, datasets with two estimates of volume and a third outcome variable were generated such that the two volume estimates had an expected ICC and the true volume had a given correlation with the outcome variable. The estimated volumes were then tested for a correlation with the outcome, and the process was repeated for several ICCs and sample sizes. In all simulations, the true correlation was set to 0.1, a value that is typical for neuroimaging research [@marek_reproducible_2022].
+To estimate how often these issues occur, we first simulated experiments with artificial data. In each simulation, datasets with two estimates of volume and a third outcome variable were generated such that the two volume estimates had an expected intraclass correlation and the true volume had a given product-moment correlation with the outcome variable. The estimated volumes were then tested for a product-moment correlation with the outcome, and the process was repeated for several intraclass correlations and sample sizes. In all simulations, the true product-moment correlation was set to a value that is small but non-zero (0.01), typical for neuroimaging research [0.1, @marek_reproducible_2022], or large (0.2). For additional details, see @sec-sim-details.
 
-With lower consistency, the two methods are more likely to produce estimates of correlation that are on opposite sides of significance thresholds (@fig-sm-errors). For example, with consistency near the value that was estimated for the amygdala volumes (0.2), around 24% of experiments with 50 participants may entail one method resulting in a $p$-value that is greater than 0.05 and the other method having a $p$-value between 0.025 and 0.05. In cases where both methods are significant at the 0.05 level, around 30% of experiments would result in correlations that go in opposite directions.
+With lower consistency, the estimated rank correlations were more often on opposite sides of a significance threshold (@fig-sm-errors a, left panel). For example, with consistency near the value that was estimated for the amygdala volumes (0.2) and a typical effect size (0.1), significance differed in around $_{32.2}32_{32.4}$ percent of simulations (for simulations, ranges indicate 95% equal-tailed intervals). That percentage was only marginally improved by increasing the sample size to 100 (to $_{31.7}31.9\%_{32.2}$).
 
-To assess how often these issues could occur in practice, we returned to the UKB. We extracted the "Cognitive" factors using the FMRIB UKBiobank Normalisation, Parsing And Cleaning Kit [@mccarthy_funpack_2023].
+Lower consistency also coincided with higher proportions of experiments in which the two methods correlate in opposite directions (@fig-sm-errors a, right panel). Considering the previous example (intraclass correlation of 0.2, effect size 0.1, and 50 participants per experiment), around $_{20.1}22\%_{23.3}$ of experiments in which both product-moment correlations were significant resulted in the correlations having opposite signs. As the intraclass correlation increased, the rates of this effect decreased rapidly, approaching 0% with an intraclass correlation of 0.4.
 
-```{r}
-targets::tar_load(cog_dif_sig)
-targets::tar_load(cog_dif_dir)
+To assess how often these two issues could occur in practice, we repeated the above analyses but with data from the UKB (sampled with replacement). From the UKB, we extracted the "Cognitive" variables using the FMRIB UKBiobank Normalisation, Parsing And Cleaning Kit [@mccarthy_funpack_2023], restricting analyses to variables with instance 2 and that exhibited one of the largest (in absolute magnitude) 50 rank correlations (of the correlations between the cognitive variables and the average of the two estimates of the volume of the left amygdala), and further to only those participants that had values for all of 50 of those variables (`r n_for_sim` participants). Each simulation resulted in a rank correlation between the two volume estimates for the left amygdala and each of the 50 variables (results were comparable with the right amygdala).
 
-a <- cog_dif_sig |>
-  mutate(estimate = abs(estimate)) |>
-  filter(abs(estimate) > 0.05) |>
-  ggplot(aes(x=N)) +
-  geom_line(aes(group=predictor, y=ds_med, color=estimate), alpha=0.2) +
-  scale_color_viridis_c(option="turbo")
+Considering differing significance, the rates across experiments using the UKB matched the rates from experiments with artificial data. In simulated experiments with 50 UKB participants in which at least one correlation was significant, one correlation was not significant in between $_{25.5}25.6_{25.8}$ and $_{30.8}31.1_{31.3}$ percent of simulations (range across the 50 variables; @fig-sm-errors b, left panel). That percentage was generally lower for variables that were more strongly correlated with the measure of volume (compare the variables that are higher versus lower in the panel).
 
-
-b <- cog_dif_dir |>
-  mutate(estimate = abs(estimate)) |>
-  filter(abs(estimate) > 0.05) |>
-  ggplot(aes(x=N, y=s)) +
-  geom_line(aes(group=predictor, color=estimate), alpha=0.2) +
-  scale_color_viridis_c(option="turbo")
-
-```
+Considering significant correlations with differing signs, the rates across experiments with the UKB were generally lower than the rates with artificial data. In experiments simulated with 50 UKB participants, the rates ranged from $_{1.3}1.4\%_{1.6}$ to $_{10.1}10.7\%_{11.4}$. For most variables, increasing the number of participants decreased the proportion of experiments in which the two correlations exhibited opposite signs, but for some the proportion increased. Across the 50 variables, 9 had a higher proportion at N=100 than N=50, 2 of which had non-overlapping 95% equal-tailed intervals (6348: duration to complete numeric path; 400: time to complete round of pairs matching game; see also @fig-left-right). 
 
 # Discussion
 
-We explored consistency of subcortical volumes within the UK Biobank [@alfaro-almagro_image_2018], observing low reliability between measures of the Amygdala. Simulations revealed that, through low reliability alone, two measures of volume may suggest opposite conclusions in approximately 25% of studies in which both are significant, and the two methods may have different significance in 20% of studies. Finally, we test this within the UKB, finding that there are differences in the magnitude of estimated relationships between subcortical volumes and psychosocial variables when the volumes are estimated by different methods, but the signs of the and the two methods could lead to opposing conclusions.
+We explored the consistency of subcortical volumes within the UK Biobank [@alfaro-almagro_image_2018], observing that two common methods of estimating the volume of the amygdala, from FSL and FreeSurfer, have low consistency with each other. Simulations revealed that consistency this low could frustrate the interpretability of results in two ways: the two methods may commonly result in correlations that are on opposite sides of significance thresholds, and if they are both significant then they may be correlated in opposite directions. The frequency of these challenges were estimated with both artificial data and data from the UKB.
 
-In general, although the lack of consistency may be troubling, note that values may relate to several factors beyond just the method. That is, estimated volumes can differ substantially within an individual due to factors like site, scanner, positioning, software version, and even time [@hedges2022; @du2021; @mcguire2017; @yang2016; @liu2020; @mulder2014; @morey2010]. In particular, one small study (N=23) suggested that the ICC for amygdala volumes estimated by FIRST, across repeated scans of the same individual, may be as low as 0.6 [@morey2010]. If these factors affect the two methods differently, then we may expect that they could contribute to the discordance between the two methods.
+## Recommendations
 
-FIRST and FreeSurfer are two of the most popular methods for estimating subcortical volumes, but they are not the only tools available. Other methods exist [e.g., @akhondi-asl2013], and some of the newer techniques are based on deep-learning approaches [e.g., @billot2023; for review, see @singh2021]. These appear to have better correspondence with manual segmentation and so may be expected to have higher ICC to each other.
+### When testing for new biomarkers, report relationships with multiple automated methods (e.g., both FSL and FreeSurfer).
+
+The main concerns in this report are that there are two methods for estimating amygdalar volume that are commonly used and yet have low consistency, and that low consistency alone can lead to conflicting results. Researchers may have idiosyncratic reasons for selecting a method, particularly when the choice is viewed as arbitrary. If the choice between methods is arbitrary, then reporting the outcome across selections clarifies the fragility or robustness of a result [for a general discussion, see @steegen_increasing_2016]. The choice may not always be arbitrary, as there are metrics and study populations for which one method may perform better [@zhou_charting_2021; @morey2009]. Note that one effect of low consistency could be a downward bias on the magnitude of estimated correlations (@sec-measurement-error), and so there may be advantages to not only reporting but combining the estimates across methods when predicting health-related outcomes (e.g., by averaging, or including both as independent variables in predictive models). Reporting estimates from multiple reasonable tools will help move conclusions beyond "there exists a correlation with the volume of the amygdala as estimated by method M (version x)" to simply "there exists a correlation with the volume of the amygdala".
+
+### When reviewing or conducting meta-analyses of relationships with amygdala volume, consider the method that was used to estimate volume.
+
+As mentioned in the Introduction, the amygdala has received substantial attention for being predictive of an array of health-related outcomes. As presented in this report, the volume that is reported by one automated method may only weakly correspond to the volume reported by another, and so it may be misleading to conduct a meta-analysis without accounting for the algorithms that were used by the individual studies. In the UKB, there are differences in the strength of the correlations between the measures of volume and the cognitive variables, with the magnitude of the correlations involving FreeSurfer's method being numerically larger in almost all of the variables considered in this report (@fig-pop-cor). Larger correlations do not imply higher veracity, but they further indicate that the methods track different aspects of amygdalar anatomy.
+
+### When replicating or extending research on a relationship that involves the volume of the amygdala, use the method reported in the original publications.
+
+This recommendation follows standard practice for a replication study, and we highlight it here in consideration of ongoing research into methods for automatically estimating subcortical volumes. Although FSL and FreeSurfer are two of the most popular methods for estimating subcortical volumes, other methods exist [e.g., @akhondi-asl2013], including newer techniques based on deep-learning approaches [e.g., @billot2023; for review, see @singh2021]. The newer methods may have better correspondence with manual segmentation, earning them consideration for replication or extension studies. But many machine learning models developed for neuroimaging have difficulty generalizing to new populations, or their generalizability remains understudied [@traut_insights_2022;@sui_neuroimaging-based_2020;@nielsen_machine_2020;@chen_sampling_2023;@woo_building_2017]. So when building on prior findings, it remains important to test the assess results when using the methods of those prior findings, even when they are older, or potentially superseded.
 
 # Supplementary Materials {#sec-supplements}
 
-## Differences in Average Volumes {#sec-avg-shift}
-
-Some of subcortical volumes appear to be systematically different when estimated by FIRST and FreeSurfer (@fig-biases-perc), replicating previous findings in other datasets [@gomez-ramirez2022].
-
-```{r}
-#| label: fig-biases-perc
-#| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement (1.96 standard deviations), with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3. Left and right structures plotted together. Biases in the average are indicated by the central ribbon excluding zero. The differences (y-axis) are expressed as a percentage of the average difference. For raw values, see Supplementary Materials."
-#| fig-height: 6
-ukb_vols_long |>
-  pivot_wider(names_from = Method, values_from = Volume) |>
-  mutate(
-    .average = (FIRST + FreeSurfer) / 2,
-    .difference = (FIRST - FreeSurfer) / .average * 100
-  ) |>
-  ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference)) +
-  facet_wrap(~Structure, scales = "free_x") +
-  geom_ba() +
-  scattermore::geom_scattermore(alpha=0.1, pointsize = 5) + 
-  xlab("Average (FIRST + ASEG)/2") +
-  ylab("Difference (FIRST - ASEG)/Average %") 
-```
-
 ## Intraclass Correlation {#sec-icc-models}
 
-The intraclass correlation was based on a 2-way mixed linear model [@mcgraw1996], in which the volume, $x$, for the region of participant $i$ as measured by method $k$ was treated as equal to the sum of an intercept, $\nu$, the "true" volume, $\lambda$, a method bias $c_k$, and an error term, $\epsilon$
+The intraclass correlation was based on a two-way mixed linear model [@mcgraw1996]. In the model, the volume $x$ for the region of participant $i$ as measured by method $k$ was treated as equal to the sum of an intercept, $\nu$, the "true" volume, $\lambda$, a method bias $c_k$, and an error term, $\epsilon$
 
 $$
 \begin{aligned}
@@ -204,9 +211,9 @@ $$
 
 Note that the $c_k$ terms are assumed fixed, and their variance is given by $\sigma_c^2=\sum_k c_k^2/(k-1)$.
 
-Important assumptions of this include that the two methods are expected to have the same mean-squared error, and that the errors for the two methods are not correlated (e.g., there are not some participants for which the methods tend to do better than others).
+An important assumption of this model is that the two methods are expected to have the same mean-squared error. The model does not include features that would allow for the errors in the two methods to be correlated (e.g., participants are not distinguished by characteristics that coincide with the methods performing better or worse).
 
-The consistency version of the ICC, $ICC(C,1)$, and the absolute agreement, $ICC(A,1)$ were given as fractions of variance
+The consistency version of the intraclass correlation, $ICC(C,1)$, and the absolute agreement, $ICC(A,1)$ were given as fractions of variance
 
 $$
 \begin{aligned}
@@ -215,48 +222,37 @@ ICC(A,1) & = \frac{\sigma_\lambda^2}{\sigma_\lambda^2 + \sigma_\epsilon^2 + \sig
 \end{aligned}
 $$
 
-## Measurement Noise
 
-Using the model from the previous supplementary section, we can build a measurement noise model. Call the final target for which we hope to find a relationship with volume $y$. The relationship between that value and the volume was given by an ordinary linear regression with error $\delta$.
+## Differences in Average Volumes {#sec-avg-shift}
 
-$$
-\begin{aligned}
-y_i & = \beta_0 + \beta_1\lambda_i + \delta_i \\
-\delta_i & \sim N(0, \sigma_\delta^2) \\
-\end{aligned}
-$$
+Some of subcortical volumes were on average different when estimated by FSL and FreeSurfer (@fig-biases-perc), replicating previous findings [@gomez-ramirez2022].
 
-But since we do not know $\lambda$, the volumes estimated by the tools are used instead, changing the regression coefficient.
+```{r}
+#| label: fig-biases-perc
+#| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement (1.96 standard deviations), with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm$^3$. Left and right structures plotted together. Biases in the average are indicated by the central ribbon excluding zero. The differences (y-axis) are expressed as a percentage of the average difference."
+#| fig-height: 6
 
-$$
-y_i = \beta_0 + \tilde{\beta_1}x_i + \delta_i \\
-$$
+ukb_vols_long |>
+  pivot_wider(names_from = Method, values_from = Volume) |>
+  mutate(
+    .average = (FIRST + FreeSurfer) / 2,
+    .difference = (FIRST - FreeSurfer) / .average * 100
+  ) |>
+  ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference)) +
+  facet_wrap(~Structure, scales = "free_x") +
+  geom_ba() +
+  scattermore::geom_scattermore(alpha=0.1, pointsize = 5) + 
+  xlab("Average (FSL + FreeSurfer)/2") +
+  ylab("Difference (FSL - FreeSurfer)/Average %") 
+```
 
-Dilution occurs because the coefficient $\tilde{\beta_1}$ estimated in this model tends to be closer zero, decreased by a factor related to the ICC [@frost2000].
-
-$$
-\tilde{\beta_1} = \beta_1\frac{\sigma_\lambda^2}{\sigma_\lambda^2 + \sigma_\epsilon^2}
-$$
-
-Correspondingly, the desired correlation, $\rho=cor(y,\lambda)$, will also be biased.
-
-$$
-\begin{aligned}
-\beta_1 & = \rho\frac{\sigma_\delta}{\sigma_\lambda} \\
-\tilde{\beta_1} & = \tilde{\rho}\frac{\sigma_\delta}{sd(x)} \\ 
-& =  \tilde{\rho} \frac{\sigma_\delta}{\sqrt{\sigma_\epsilon^2 + \sigma_\lambda^2}} \\
-&  \implies \\
-\rho \frac{\sigma_\delta}{\sigma_\lambda} &  = \tilde{\rho}\frac{\sigma_\delta}{\sqrt{\sigma_\epsilon^2+\sigma_\lambda^2}} \frac{\sigma_\lambda^2 + \sigma_\epsilon^2}{\sigma_\lambda^2} \\
-&  \implies \\
-\rho & = \tilde{\rho} \frac{\sqrt{\sigma_\epsilon^2+\sigma_\lambda^2}}{\sigma_\lambda }
-\end{aligned}
-$$
-
-## Biases
 
 ```{r}
 #| label: fig-biases
 #| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement (1.96 standard deviations), with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3. Left and right structures plotted together. Biases in the average are indicated by the central ribbon excluding zero."
+#| fig-height: 6
+#| eval: false
+
 ukb_vols_long |>
   pivot_wider(names_from = Method, values_from = Volume) |>
   mutate(
@@ -267,15 +263,16 @@ ukb_vols_long |>
   facet_wrap(~Structure, scales = "free") +
   geom_ba() +
   scattermore::geom_scattermore(alpha=0.3, pointsize = 5) + 
-  xlab("Average ([FIRST + ASEG]/2)") +
-  ylab("Difference (FIRST - ASEG)") 
+  xlab("Average ([FSL + FreeSurfer]/2)") +
+  ylab("Difference (FSL - FreeSurfer)") 
 ```
 
-## Remaining Structures {#sec-other-structs}
+\newpage 
+## Intraclass Correlations Across All Subcortical Regions {#sec-other-structs}
 
 ```{r}
 #| label: tbl-iccs
-#| tbl-cap: "Intraclass Correlation for Subcortical Structures. Subscripts indicate confidence intervals."
+#| tbl-cap: "Intraclass Correlation for Subcortical Structures. Subscripts indicate 95% confidence intervals."
 
 ukb_vols_long |>
   filter(stringr::str_detect(Method, "FSSUBSEG", negate=TRUE)) |>
@@ -312,6 +309,7 @@ ukb_vols_long |>
 ```
 
 ```{r gen-other-vol-figs}
+#| eval: false
 figs <- purrr::map(
   c("Thalamus", "Putamen", "Accumbens", "Pallidum", "Caudate"), 
   plot_struct,
@@ -322,58 +320,81 @@ figs <- purrr::map(
 ```{r}
 #| label: fig-thalamus
 #| fig-cap: "Thalamus Volume Comparison."
+#| eval: false
 figs[[1]]
 ```
 
 ```{r}
 #| label: fig-putamen
 #| fig-cap: "Putamen Volume Comparison."
+#| eval: false
 figs[[2]]
 ```
 
 ```{r}
 #| label: fig-accumbens
 #| fig-cap: "Accumbens Volume Comparison."
+#| eval: false
 figs[[3]]
 ```
 
 ```{r}
 #| label: fig-pallidum
 #| fig-cap: "Pallidum Volume Comparison."
+#| eval: false
 figs[[4]]
 ```
 
 ```{r}
 #| label: fig-caudate
 #| fig-cap: "Caudate Volume Comparison."
+#| eval: false
 figs[[5]]
 ```
 
-## Deconfounding
+## Intraclass Correlations After Residualizing on Potential Confounds {#sec-confounds}
 
-One possible source of low ICC could be systematic inaccuracies with certain kinds of participants. For example, one of the two methods could tend to underestimate volumes when given brains that have experienced severe atrophy, which would decrease the agreement of the methods. To assess this, correlations between the amygdala volumes and the SIMPLE confounds within the UKB were calculated [@alfaro-almagro2021].
+One possible source of low intraclass correlations could be systematic inaccuracies with certain kinds of participants. For example, one of the two methods could tend to underestimate volumes when given brains that have experienced severe atrophy, which would decrease the agreement of the methods. To assess this, correlations between the amygdala volumes and the SIMPLE confounds within the UKB were calculated [@alfaro-almagro2021].
 
-Several of the correlations appeared to be non-zero (@fig-partials-amyg). However, regressing these confounds from the estimated amygdala volumes did not improve the ICCs (@tbl-iccs-deconfounded).
+Several of the correlations appeared to be non-zero (@fig-partials-amyg). However, regressing these confounds from the estimated amygdala volumes did not improve the intraclass correlations (@tbl-iccs-deconfounded).
 
 ```{r}
 #| label: fig-partials-amyg
-#| fig-cap: "Partial Correlation Between Potential Confounders and Amygdala Volume Measurements. avg: Average volume as estimated by the two regions. diff: Difference in volume as estimated by the two regions (FIRST-FreeSurfer). Note that the variable 'Head Size' corresponds to a scaling factor such that larger values imply smaller brains."
-#| fig-height: 8
-#| fig-width: 10
+#| fig-cap: 'Correlation Between Potential Confounders and Amygdala Volume Measurements. Summary describes how the the volumes were combined across methods. Summaries were either an average or a difference (FSL-FreeSurfer). Note that the variable "Head Size" corresponds to a scaling factor, and that larger values imply smaller brains.'
+#| fig-height: 7
+
 targets::tar_load(partials)
-partials |> 
-  filter(Structure == "Amygdala") |>
-  ggplot(aes(x=estimate, y=term, color=response)) + 
-  geom_point() + 
+# a <- partials |> 
+#   filter(Structure == "Amygdala") |>
+  # mutate(term = forcats::fct_relabel(term, stringr::str_remove, " \\(imaging\\)")) |>
+#   ggplot(aes(y=term, color=response)) + 
+#   geom_errorbarh(aes(xmin=lower, xmax=upper)) + 
+#   facet_wrap(~Hemisphere) +
+#   xlab("Partial Correlation") +
+#   theme_gray(base_size = 9) +
+#   theme(legend.position = "bottom") 
+
+partials |>
+  dplyr::select(
+    Variable=Parameter1, 
+    Summary=Parameter2, 
+    lower=CI_low, 
+    upper=CI_high, 
+    Hemisphere) |>
+    mutate(Variable = forcats::fct_relabel(Variable, stringr::str_replace_all, "_" , ":")) |>
+  ggplot(aes(y=Variable, color=Summary)) + 
   geom_errorbarh(aes(xmin=lower, xmax=upper)) + 
-  facet_wrap(~Hemisphere) +
-  theme(legend.position = "bottom")
+  facet_wrap(~Hemisphere, labeller = label_both) +
+  xlab("Product-Moment Correlation with Summarized Amygdala Volumes") +
+  theme_gray(base_size = 9) +
+  theme(legend.position = "bottom") 
 
 ```
 
+
 ```{r}
 #| label: tbl-iccs-deconfounded
-#| tbl-cap: "Intraclass Correlation After Deconfounding. Prior to calculating consistency, volumes were deconfounded by a version of the SIMPLE parameter set described by Alfaro-Almargo et al. (2021). The parameter set includes age, age^2, sex, age*sex, head size, head motion (the measure of T1 motion was used), date, and date^2, each crossed with acquisition site, as well as indicators for acquisition site. Compare to "
+#| tbl-cap: "Intraclass Correlation After Deconfounding. Prior to calculating consistency, volumes were deconfounded by a version of the SIMPLE parameter set described by @alfaro-almagro2021. For the list of variables, see @fig-partials-amyg. Subscripts indicate 95% confidence intervals."
 
 ukb_vols |>
   mutate(acq_day = (acq_day - min(acq_day)) |> as.numeric()) |>
@@ -430,21 +451,47 @@ ukb_vols |>
 
 ```
 
-### Adjusting for ICV
+## Simulated Experiments {#sec-sim-details}
+
+To simulate hypothetical data, the models described in the previous sections were used. Sample sizes were set between 10 to 100 in steps of 10. At each combination of parameters, experiments were repeated 1,000,000 times. Simulated experiments with the UKB data were performed analogously to those with hypothetical data.
+
+Across repetitions, the rates of each effect were estimated by analytic Bayesian methods (binomial likelihood with Beta prior whose shape parameters were set to 1/2). The effect of "Different Significance" was calculated as the median of the posterior for which one correlation exhibited a $p$-value that was between 0.025 and 0.05 and the other was above 0.05, out of experiments in which at least one $p$-value was below 0.05. The effect of "Different Direction" was calculated as the median of the posterior, using experiments in which both correlations had opposite magnitudes given that both were significant. 
+
+The 95% equal-tailed interval of the posteriors for the simulations are shown in @fig-left-right.
+
+```{r}
+#| label: fig-left-right
+#| fig-cap: "Effects of Low Measurement Consistency on the UKB in Left and Right Hemispheres. Ribbons span 95% equal-tailed interval estimated from simulated experiments. See also Figure 2, where the medians are represented as color."
+#| fig-height: 11
+#| fig-width: 8
+
+a <- make_spaghetti(cog_dif_sig, cog_dif_dir, "Left")
+b <- make_spaghetti(cog_dif_sig, cog_dif_dir, "Right")
+
+a + b + 
+  plot_layout(guides = "collect", ncol = 1) + 
+  plot_annotation(tag_levels = "a", tag_suffix = ")") &
+  theme(legend.position = "bottom")
+
+```
+
+
+### Adjusting for ICV {#sec-adjust-icv}
 
 When reporting differences in volume between groups, it is common to adjust for some measure of either head size or cerebral volume [@barnes_head_2010; @mathalon_correction_1993; @voevodskaya_effects_2014]. Adjusting by intracranial volume as estimated by FreeSurfer did not improve the intraclass correlations @tbl-adjust.
 
 ```{r}
 #| label: tbl-adjust
-#| tbl-cap: "Consistency of Volumes when Adjusting by Intracranial Volume. Adjustments were done by residualizing with respect to ICV."
+#| tbl-cap: "Consistency of Volumes when Adjusting by Intracranial Volume. Adjustments were done by residualizing with respect to ICV. Subscripts indicate 95% confidence intervals."
+#| fig-pos: 't'
 
 ukb_vols_long |>
   filter(stringr::str_detect(Method, "FSSUBSEG", negate=TRUE)) |>
   pivot_wider(names_from = Method, values_from = Volume) |>
   mutate(
-        across(
-            c(ends_with("FreeSurfer"), ends_with("FIRST")), 
-            \(x) mean(x) + resid(lm(x ~ icv)))) |>
+    across(
+      c(ends_with("FreeSurfer"), ends_with("FIRST")), 
+      \(x) mean(x) + resid(lm(x ~ icv)))) |>
   group_nest(Hemisphere, Structure) |>
   mutate(
     icc = map(
@@ -477,169 +524,77 @@ ukb_vols_long |>
 
 ```
 
-##  {#sec-icc-relations}
+
+## Measurement Error and Reduced Correlation Magnitude {#sec-measurement-error}
+
+Using the model from @sec-icc-models, we can build a measurement noise model [e.g., @frost_correcting_2000]. Call the final target for which we hope to find a relationship with volume $y$. The relationship between that value and the volume was given by an ordinary linear regression with error $\delta$.
+
+$$
+\begin{aligned}
+y_i & = \beta_0 + \beta_1\lambda_i + \delta_i \\
+\delta_i & \sim N(0, \sigma_\delta^2) \\
+\end{aligned}
+$$
+
+But since we do not know $\lambda$, the volumes estimated by the tools are used instead, changing the regression coefficient.
+
+$$
+y_i = \beta_0 + \tilde{\beta_1}x_i + \delta_i \\
+$$
+
+Dilution occurs because the coefficient $\tilde{\beta_1}$ estimated in this model tends to be closer zero, decreased by a factor related to the intraclass correlation [@frost_correcting_2000].
+
+$$
+\tilde{\beta_1} = \beta_1\frac{\sigma_\lambda^2}{\sigma_\lambda^2 + \sigma_\epsilon^2}
+$$
+
+Correspondingly, the desired correlation, $\rho=cor(y,\lambda)$, will also be biased.
+
+$$
+\begin{aligned}
+\beta_1 & = \rho\frac{\sigma_\delta}{\sigma_\lambda} \\
+\tilde{\beta_1} & = \tilde{\rho}\frac{\sigma_\delta}{sd(x)} \\ 
+& =  \tilde{\rho} \frac{\sigma_\delta}{\sqrt{\sigma_\epsilon^2 + \sigma_\lambda^2}} \\
+&  \implies \\
+\rho \frac{\sigma_\delta}{\sigma_\lambda} &  = \tilde{\rho}\frac{\sigma_\delta}{\sqrt{\sigma_\epsilon^2+\sigma_\lambda^2}} \frac{\sigma_\lambda^2 + \sigma_\epsilon^2}{\sigma_\lambda^2} \\
+&  \implies \\
+\rho & = \tilde{\rho} \frac{\sqrt{\sigma_\epsilon^2+\sigma_\lambda^2}}{\sigma_\lambda }
+\end{aligned}
+$$
+
+## Correlations Between Volumes of the Amygdala and Cognitive Variables
 
 ```{r}
-#| eval: false
-#| label: fig-age
-#| fig-cap: "Difference in Estimated Subcortical Volume by Age. Horizontal lines show average difference and limits of agreement, with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3."
-ukb_vols_long |>
-  pivot_wider(names_from = Method, values_from = Volume) |>
-  mutate(
-    .difference = FIRST - FreeSurfer,
-    .average = (FIRST + FreeSurfer) / 2
-  ) |>
-  ggplot2::ggplot(ggplot2::aes(x = age, y = .difference)) +
-  facet_wrap(~Structure, scales = "free") +
-  geom_ba() +
-  ggdist::stat_gradientinterval() +
-  xlab("Age (Yrs)") +
-  ylab("Difference (FIRST - ASEG)") 
+#| label: fig-pop-cor
+#| fig-cap: "Correlations Between Cognitive Factors and Estimated Volumes of the Left and Right Amygdala. Variables are ordered by decreasing rank correlation using average of left hemisphere volume estimates. Note that variables were selected based on the magnitude of their correlation with amygdalar volumes, which differed across hemispheres, and so the variables in left and right panels differ. Error bars span 95% confidence intervals (bootstrapped with 1000 samples)."
+#| fig-height: 7
 
-```
+targets::tar_load(amyg_vols_cors)
 
-```{r}
-#| eval: false
-#| label: fig-sex
-#| fig-cap: "Bland-Altman Plots for Subcortical Volume. Horizontal lines show average difference and limits of agreement, with ribbons marking 95% confidence intervals. Panels correspond to subcortical structures. Volumes measured in cm^3. Color indicates reported sex."
-#| fig-height: 6
-
-ukb_vols_long |>
-  pivot_wider(names_from = Method, values_from = Volume) |>
-  mutate(
-    .difference = FIRST - FreeSurfer,
-    .average = (FIRST + FreeSurfer) / 2
-  ) |>
-  ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference, color=sex)) +
-  facet_wrap(~Structure, scales = "free") +
-  geom_ba() +
-  scattermore::geom_scattermore(alpha=0.1, pointsize = 2) + 
-  scale_color_viridis_d(option="inferno", end = 0.8) +
-  scale_fill_discrete(guide = "none") +
-  xlab("Average (FIRST + ASEG)/2") +
-  ylab("Difference (FIRST - ASEG)")
-```
-
-```{r}
-#| label: fig-position
-#| fig-cap: "Correlations Between Participant Position and either the Average (avg) or Difference (diff) of Volume Estimates. Error bars span 95% confidence intervals. iso: indicates whether the table was placed at a fixed location."
-#| fig-height: 6
-#| eval: false
-
-positions <- arrow::open_dataset("data/ukb26883_bulk.parquet") |> 
-  select(
-    f.eid, 
-    site=f.54.2.0,
-    f.25733.2.0,
-    table_position=f.25759.2.0,
-    x_position=f.25756.2.0,
-    y_position=f.25757.2.0,
-    z_position=f.25758.2.0) |>
-  collect() |>
-  mutate(
-    across(everything(), as.numeric),
-    f.eid = as.character(f.eid)) |>
-  filter(!is.na(f.25733.2.0)) |>
-  select(-f.25733.2.0) |>
-  na.omit() |>
-  mutate(iso = if_else(table_position == -1042, TRUE, FALSE)) |>
-  pivot_longer(c(-f.eid, -iso, -site))
-
-
-ukb_vols_long |>
-  pivot_wider(names_from = Method, values_from = Volume) |>
-  mutate(
-    .difference = FIRST - FreeSurfer,
-    .average = (FIRST + FreeSurfer) / 2
-  ) |>
-  right_join(positions, relationship = "many-to-many") |>
-  na.omit() |>
+amyg_vols_cors |> 
   summarise(
-    avg = list(cor.test(.average, value, method = "pearson") |> broom::tidy()),
-    diff = list(cor.test(.difference, value, method = "pearson") |> broom::tidy()),
-    .by = c(Structure, iso, name)
-  ) |>
-  unnest(c(avg, diff), names_sep = "_") |>
-  na.omit() |>
-  select(-ends_with("method"), -ends_with("alternative"), -ends_with("statistic"), -ends_with("p.value"), -ends_with("parameter")) |>
-  pivot_longer(
-    c(starts_with("avg_"), starts_with("diff_")), 
-    names_to = c("type", "param"), 
-    names_sep = "_") |>
-  pivot_wider(names_from = param) |> 
-  ggplot(aes(x=Structure, y=estimate, color=iso)) + 
-  facet_wrap(~name+type) + 
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
-  geom_point() +
-  scale_y_continuous("Correlation", breaks = c(-0.1, 0, 0.1), labels = c(-0.1, 0, 0.1))+
-  coord_flip() 
-
+    lower=quantile(estimate, probs = 0.025), 
+    upper=quantile(estimate, probs = 0.975), 
+    .by = c(Method, predictor, Hemisphere)) |> 
+  left_join(
+    distinct(cog_dif_dir, rho=estimate, predictor, Hemisphere)) |> 
+  mutate(
+    predictor = interaction(predictor, round(abs(rho), digits=2)),
+    predictor = ordered(predictor), 
+    predictor = forcats::fct_relabel(predictor, ~stringr::str_extract(.x, "(?<=f.)([[:print:]]+)(?=.0.[[:digit:]]+$)")),
+    Method = stringr::str_replace(Method, "FIRST", "FSL")) |> 
+  ggplot(aes(y=predictor, color=Method)) + 
+  facet_wrap(~Hemisphere, scales = "free_y", labeller = label_both) +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  ylab("Cognitive Variable") +
+  xlab("Rank Correlation with\nAmygdala Volume") +
+  theme_gray(base_size = 9) +
+  theme(
+    legend.position = "bottom"
+  )
 
 ```
 
-```{r}
-#| eval: false
-ukb_vols_long |>
-  pivot_wider(names_from = Method, values_from = Volume) |>
-  mutate(
-    .difference = FIRST - FreeSurfer,
-    .average = (FIRST + FreeSurfer) / 2,
-    across(where(is.factor), as.numeric)
-  ) |>
-  summarise(
-    across(
-      c(age, t1_motion, head_size, sex), 
-      \(x) cor.test(.difference, x) |> broom::tidy() |> list(),
-      .names = "{.col}_diff"),
-    across(
-      c(age, t1_motion, head_size, sex), 
-      \(x) cor.test(.average, x) |> broom::tidy() |> list(),
-      .names = "{.col}_avg"),
-    .by = c(Hemisphere, Structure)
-  ) |>
-  pivot_longer(c(ends_with("diff"), ends_with("avg"))) |>
-  unnest(value) |>
-  extract(
-    name, 
-    c("predictor", "response"), 
-    regex = "([[:print:]]+)_(diff|avg)")  |> 
-  mutate(p.value = p.adjust(p.value, "holm"), sig=p.value < 0.05) |> 
-  ggplot(aes(x=estimate, y=interaction(Structure,Hemisphere), color=response)) + 
-  geom_point(aes(shape=sig)) + 
-  geom_errorbarh(aes(xmin=conf.low, xmax=conf.high)) + 
-  facet_wrap(~predictor)
-```
-
-```{r}
-#| eval: false
-ukb_vols_long |>
-  filter(stringr::str_detect(Structure, "Amy")) |>
-  pivot_wider(names_from = Method, values_from = Volume) |>
-  mutate(
-    .difference = FIRST - FreeSurfer,
-    .average = (FIRST + FreeSurfer) / 2,
-    acq_day=(acq_day - min(acq_day)) |> as.numeric()) |>
-  na.omit() |>
-  mutate(
-    age2 = age^2,
-    acq_day2 = acq_day^2,
-    across(
-      c(age, age2, t1_motion, head_size, acq_day, acq_day2), 
-      \(x) (x - median(x)) / mad(x)),
-    .by = site) |>
-  summarise(
-    diff = lm(.difference ~ site + (age*sex):site + age2:site + t1_motion:site + head_size:site + acq_day:site + acq_day2:site) |> broom::tidy() |> list(),
-    avg = lm(.average ~ site + (age*sex):site + age2:site + t1_motion:site + head_size:site + acq_day:site + acq_day2:site) |> broom::tidy() |> list(),
-    .by = c(Hemisphere, Structure)
-  ) |>
-  pivot_longer(c(ends_with("diff"), ends_with("avg")), names_to = "response") |>
-  unnest(value) |>
-  filter(stringr::str_detect(term, "(Intercept)", TRUE)) |>
-  ggplot(aes(x=estimate, y=term, color=response)) + 
-  geom_point() + 
-  geom_errorbarh(aes(xmin=estimate-2*std.error, xmax=estimate+2*std.error)) + 
-  facet_wrap(~Structure+Hemisphere)
-```
 
 # References {.unnumbered}
 

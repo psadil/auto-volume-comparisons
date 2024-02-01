@@ -6,9 +6,28 @@ source("R/smerrors.R")
 source("R/partials.R")
 source("R/cognitive.R")
 
+# controller_local <- crew::crew_controller_local(
+#   name = "local_controller",
+#   workers = 1,
+#   seconds_idle = 10
+# )
+# controller_slurm <- crew.cluster::crew_controller_slurm(
+#   name = "slurm_controller",
+#   workers = 3,
+#   seconds_idle = 15,
+#   script_lines = c("source /users/pssadil/.bashrc", "mamba activate auto-vols"),
+#   slurm_memory_gigabytes_per_cpu = 10,
+# )
+# tar_option_set(
+#   controller = crew_controller_group(controller_local, controller_slurm),
+#   resources = tar_resources(
+#     crew = tar_resources_crew(controller = "local_controller")
+#   )
+# )
+
 targets::tar_option_set(
   packages = c("ggplot2", "rlang"),
-  controller = crew::crew_controller_local(workers = 4)
+  memory = "transient"
 )
 
 list(
@@ -16,15 +35,12 @@ list(
   tar_target(ukb_vols, load_ukb_vols(ukb_parquet), format = "parquet"),
   tar_target(ukb_dd, load_ukb_data_dictionary(), format = "parquet"),
   tar_target(ukb_vols_long, load_ukb_vols2(ukb_vols), format = "parquet"),
-  tar_target(rhos, c(0.01,  0.1)),
+  tar_target(rhos, c(0.01,  0.1, 0.2)),
   tar_target(sm_N, c(seq(10, 100, by=10))),
-  tar_target(
-    sm_data, 
-    get_single_data(N=sm_N, rho=rhos, i=10000), 
-    pattern = cross(rhos, sm_N),
-    format = "parquet",
-    cue = tar_cue("never")),
-  tar_target(icc, c(0.1, 0.2, 0.5, 0.8, 0.9)),
+  tar_target(icc, c(0.1, 0.2, 0.3, 0.4, 0.5)),
+  # tar_target(rhos, c(0.01)),
+  # tar_target(sm_N, c(seq(100, 100, by=10))),
+  # tar_target(icc, c(0.5)),
   tar_target(
     icc_data, 
     get_icc_data(N=sm_N, rho=rhos, i=1000000, icc=icc), 
@@ -38,34 +54,59 @@ list(
   tar_target(
     partials,
     get_partials(ukb_vols_long),
-    format = "parquet",
-    packages = "LMMstar",
-    cue = tar_cue("never")
+    format = "parquet"
   ),
   tar_target(cognitive_tsv, "data/cognitive.tsv", format = "file"),
   tar_target(cognitive, prep_cognitive(cognitive_tsv), format = "parquet"),
+  tar_target(hemisphere, c("Left", "Right")),
   tar_target(
     cog_cor_full_ukb,
-    get_cog_cor_full_ukb(cognitive=cognitive, ukb_vols_long=ukb_vols_long),
-    format = "parquet"
+    get_cog_cor_full_ukb(
+      cognitive=cognitive, 
+      ukb_vols_long=ukb_vols_long,
+      hemisphere=hemisphere),
+    format = "parquet",
+    pattern = map(hemisphere)
   ),
+  tar_target(predictor, 1+seq_len(50)),
   tar_target(
-    cog_cor, 
-    sample_cog_cor(
+    amyg_vols, 
+    get_amyg_vols(
       ukb_vols_long=ukb_vols_long,
       cognitive=cognitive,
       cog_cor_full_ukb=cog_cor_full_ukb,
-      N=sm_N,
-      i=100000), 
+      predictor=predictor,
+      max_predictors=50), 
     format = "parquet",
-    pattern = map(sm_N)),
+    pattern = cross(predictor, cog_cor_full_ukb)),
+  tar_target(
+    cog_cor, 
+    sample_cog_cor(
+      amyg_vols=amyg_vols,
+      N=sm_N,
+      i=1000000), 
+    format = "parquet",
+    pattern = cross(sm_N, amyg_vols)),
   tar_target(
     cog_dif_sig, 
     get_cog_dif_sig(cog_cor=cog_cor, cog_cor_full_ukb=cog_cor_full_ukb),
-    format = "parquet"),
+    format = "parquet",
+    pattern = map(cog_cor)),
   tar_target(
     cog_dif_dir, 
     get_cog_dif_dir(cog_cor=cog_cor, cog_cor_full_ukb=cog_cor_full_ukb),
-    format = "parquet"),
+    format = "parquet",
+    pattern = map(cog_cor)),
+  tar_target(batch, seq_len(1)),
+  tar_target(
+    amyg_vols_cors, 
+    bootstrap_amyg_vols_cors(
+      amyg_vols=amyg_vols, 
+      cog_dif_dir=cog_dif_dir, 
+      hemisphere=hemisphere, 
+      batch=batch,
+      times = 1000),
+    format = "parquet",
+    pattern = cross(amyg_vols, batch)),
   tarchetypes::tar_quarto(manuscript)
 )

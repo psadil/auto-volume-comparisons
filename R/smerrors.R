@@ -127,7 +127,9 @@ get_icc_data <- function(
       fits = purrr::pmap(
         list(rho=rho, N=N), 
         .get_both_fit,
-        nu=nu, beta0=beta0, sigma_epsilon=sigma_epsilon, sigma_c=sigma_c, sigma_lambda=sigma_lambda, sigma_delta=sigma_delta),
+        nu=nu, beta0=beta0, 
+        sigma_epsilon=sigma_epsilon, sigma_c=sigma_c, 
+        sigma_lambda=sigma_lambda, sigma_delta=sigma_delta),
       p_x1 = purrr::map_dbl(fits, ~.x[[1]]$p.value),
       p_x2 = purrr::map_dbl(fits, ~.x[[2]]$p.value),
       r_x1 = purrr::map_dbl(fits, ~.x[[1]]$estimate),

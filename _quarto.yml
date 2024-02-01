@@ -23,3 +23,12 @@ format:
         path: "_extensions/andrewheiss/wordcount/citeproc.lua"
       - at: pre-render
         path: "_extensions/andrewheiss/wordcount/wordcount.lua"
+        
+crossref:
+  custom:
+    - kind: float
+      key: sfig
+      latex-env: sfig
+      reference-prefix: Figure S
+      space-before-numbering: false
+      latex-list-of-description: Supplementary Figure
