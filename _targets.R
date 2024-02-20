@@ -6,24 +6,6 @@ source("R/smerrors.R")
 source("R/partials.R")
 source("R/cognitive.R")
 
-# controller_local <- crew::crew_controller_local(
-#   name = "local_controller",
-#   workers = 1,
-#   seconds_idle = 10
-# )
-# controller_slurm <- crew.cluster::crew_controller_slurm(
-#   name = "slurm_controller",
-#   workers = 3,
-#   seconds_idle = 15,
-#   script_lines = c("source /users/pssadil/.bashrc", "mamba activate auto-vols"),
-#   slurm_memory_gigabytes_per_cpu = 10,
-# )
-# tar_option_set(
-#   controller = crew_controller_group(controller_local, controller_slurm),
-#   resources = tar_resources(
-#     crew = tar_resources_crew(controller = "local_controller")
-#   )
-# )
 
 targets::tar_option_set(
   packages = c("ggplot2", "rlang"),

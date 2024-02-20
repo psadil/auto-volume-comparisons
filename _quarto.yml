@@ -5,7 +5,7 @@ project:
     - "!notes.qmd"
 
 execute:
-  freeze: auto
+  freeze: false
   cache: true
 
 format:
@@ -17,18 +17,4 @@ format:
       formatting: preprint
       model: 1p
       cite-style: authoryear
-    citeproc: false
-    filters: 
-      - at: pre-render
-        path: "_extensions/andrewheiss/wordcount/citeproc.lua"
-      - at: pre-render
-        path: "_extensions/andrewheiss/wordcount/wordcount.lua"
-        
-crossref:
-  custom:
-    - kind: float
-      key: sfig
-      latex-env: sfig
-      reference-prefix: Figure S
-      space-before-numbering: false
-      latex-list-of-description: Supplementary Figure
+
