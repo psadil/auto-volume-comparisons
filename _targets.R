@@ -19,7 +19,7 @@ list(
   tar_target(ukb_vols_long, load_ukb_vols2(ukb_vols), format = "parquet"),
   tar_target(rhos, c(0.01,  0.1, 0.2)),
   tar_target(sm_N, c(seq(10, 100, by=10))),
-  tar_target(icc, c(0.1, 0.2, 0.3, 0.4, 0.5)),
+  tar_target(icc, c(0.1, 0.2, 0.3, 0.4, 0.6, 0.8)),
   # tar_target(rhos, c(0.01)),
   # tar_target(sm_N, c(seq(100, 100, by=10))),
   # tar_target(icc, c(0.5)),
@@ -90,5 +90,11 @@ list(
       times = 1000),
     format = "parquet",
     pattern = cross(amyg_vols, batch)),
+  tar_target(fig_vol_comparison, make_vol_comparison(ukb_vols), packages = c("patchwork")),
+  tar_target(
+    fig_biases_perc, 
+    make_biases_perc(ukb_vols_long), 
+    packages = c("patchwork")),
+  tar_target(why_flat, make_why_flat(icc_data)),
   tarchetypes::tar_quarto(manuscript)
 )

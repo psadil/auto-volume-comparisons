@@ -11,7 +11,11 @@ execute:
 format:
   elsevier-pdf:
     includes:
-      in_header: 'gt_packages.sty'
+      in_header: 
+        - 'gt_packages.sty'
+    include-in-header:
+      - text: |
+          \usepackage[section]{placeins}
     journal:
       name: Journal Name
       formatting: preprint

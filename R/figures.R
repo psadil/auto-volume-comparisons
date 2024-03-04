@@ -120,9 +120,9 @@ ggally_statistic <- function(data, mapping, text_fn, title, na.rm = NA, display_
                                                             ymin))
   if (!is.null(colorData) && !inherits(colorData, "AsIs")) {
     cord <- plyr::ddply(data.frame(x = xData, y = yData, color = colorData), 
-                  "color", function(dt) {
-                    text_fn(dt$x, dt$y)
-                  })
+                        "color", function(dt) {
+                          text_fn(dt$x, dt$y)
+                        })
     colnames(cord)[2] <- "text"
     lev <- levels(as.factor(colorData))
     ord <- rep(-1, nrow(cord))
@@ -135,9 +135,9 @@ ggally_statistic <- function(data, mapping, text_fn, title, na.rm = NA, display_
     }
     cord <- cord[order(ord[ord >= 0]), ]
     cord$label <- stringr::str_c(format(cord$color, justify = justify_labels), 
-                        sep, format(cord$text, justify = justify_text))
+                                 sep, format(cord$text, justify = justify_text))
     ggally_text_args <- append(list(label = stringr::str_c(title, 
-                                                  sep, text_fn(xVal, yVal)), mapping = mapping, xP = 0.5, 
+                                                           sep, text_fn(xVal, yVal)), mapping = mapping, xP = 0.5, 
                                     yP = 0.9, xrange = xrange, yrange = yrange), title_args)
     p <- do.call(ggally_text, ggally_text_args)
     xPos <- rep(align_percent, nrow(cord)) * diff(xrange) + 
@@ -297,4 +297,111 @@ make_spaghetti <- function(cog_dif_sig, cog_dif_dir, hemisphere) {
       labels = c(0, 50, 100)) +
     ggplot2::ggtitle(glue::glue("UKB {hemisphere}")) +
     ggplot2::theme_gray(base_size = 8)
+}
+
+make_vol_comparison <- function(ukb_vols){
+  a <- ukb_vols |>
+    plot_struct("Hippocampus", base_size = 8) |>
+    GGally::ggmatrix_gtable() |>
+    patchwork::wrap_elements()
+  b <- ukb_vols |>
+    plot_struct("Amygdala", base_size = 8) |>
+    GGally::ggmatrix_gtable() |>
+    patchwork::wrap_elements()
+  
+  a + b + 
+    patchwork::plot_layout(ncol = 1) + 
+    patchwork::plot_annotation(tag_levels = "a", tag_suffix = ")") & 
+    ggplot2::theme(legend.position = "bottom")
+}
+
+make_biases_perc <- function(ukb_vols_long) {
+  
+  a <- ukb_vols_long |>
+    tidyr::pivot_wider(names_from = Method, values_from = Volume) |>
+    dplyr::mutate(
+      .average = (FIRST + FreeSurfer) / 2,
+      .difference = (FIRST - FreeSurfer) 
+    ) |>
+    ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference)) +
+    ggplot2::facet_wrap(~Structure, scales = "free") +
+    scattermore::geom_scattermore(alpha=0.1, pointsize = 3) +
+    ggplot2::stat_density2d(
+      ggplot2::aes(
+        alpha = ggplot2::after_stat(ndensity),
+        fill = ggplot2::after_stat(ndensity)),
+      geom = "raster",
+      contour = FALSE) +
+    agree::geom_ba() +
+    ggplot2::scale_fill_viridis_c(
+      option = "inferno", 
+      name="Normalized Density") +
+    ggplot2::scale_alpha(range = c(0,1), guide = "none") +
+    ggplot2::xlab(
+      expression("Average (cm$^3$) (FSL + FreeSurfer)/2")) +
+    ggplot2::ylab(
+      "Difference (cm$^3$)\n(FSL - FreeSurfer)") +
+    ggplot2::theme(
+      legend.direction = "horizontal", 
+      legend.position = "inside", 
+      legend.justification = "right", 
+      legend.justification.inside = c(1,0), 
+      legend.title.position = "top", 
+      legend.key.width = unit(.35, "inch"))
+  
+  b <- ukb_vols_long |>
+    tidyr::pivot_wider(names_from = Method, values_from = Volume) |>
+    dplyr::mutate(
+      .average = (FIRST + FreeSurfer) / 2,
+      .difference = (FIRST - FreeSurfer) /.average * 100
+    ) |>
+    ggplot2::ggplot(ggplot2::aes(x = .average, y = .difference)) +
+    scattermore::geom_scattermore(alpha=0.1, pointsize = 3) +
+    ggplot2::stat_density2d(
+      ggplot2::aes(
+        alpha = ggplot2::after_stat(ndensity),
+        fill = ggplot2::after_stat(ndensity)),
+      geom = "raster",
+      contour = FALSE) +
+    agree::geom_ba() +
+    ggplot2::scale_fill_viridis_c(option = "inferno", name="Normalized\nDensity") +
+    ggplot2::scale_alpha(range = c(0,1)) +
+    ggplot2::xlab(
+      "Average (cm$^3$) (FSL + FreeSurfer)/2") +
+    ggplot2::ylab(
+      "Difference (\\%)\n(FSL - FreeSurfer)/Average") +
+    ggplot2::theme(legend.position = "none")
+  
+  a + b + 
+    patchwork::plot_layout(nrow = 2, heights = c(3,2)) + 
+    patchwork::plot_annotation(tag_levels = "a", tag_suffix = ")")
+}
+
+make_why_flat <- function(icc_data){
+  icc_data |> 
+    dplyr::filter(
+      icc %in% c(0.1, 0.8), 
+      rho == 0.1, 
+      N < 300, 
+      !(N/10)%%2) |> 
+    dplyr::mutate(
+      p_x1 = p_x1 < 0.05, 
+      p_x2 = p_x2 < 0.05, 
+      Significant = dplyr::case_when(
+        p_x1 & p_x2 ~ "Both",
+        p_x1 & !p_x2 ~ "One",
+        !p_x1 & p_x2 ~ "One",
+        !p_x1 & !p_x2 ~ "Neither",
+      ),
+      Significant = factor(
+        Significant, 
+        levels = c("Neither", "One", "Both"))) |>
+    dplyr::rename(ICC=icc) |>
+    ggplot2::ggplot(
+      ggplot2::aes(x=r_x1, y=r_x2, color=Significant)) + 
+    ggplot2::facet_grid(N~ICC, labeller= "label_both") + 
+    scattermore::geom_scattermore() +
+    ggplot2::xlab("First Correlation") +
+    ggplot2::ylab("Second Correlation") +
+    ggplot2::scale_color_viridis_d(option = "inferno", end = 0.8)
 }

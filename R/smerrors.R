@@ -142,19 +142,25 @@ get_icc_data <- function(
 get_icc_data2 <- function(icc_data){
   icc_data |> 
     dplyr::summarise(
-      different_direction_s = sum(same_sign[p_x1 < 0.05 & p_x2 < 0.05]),
+      different_direction_s = sum(!same_sign[p_x1 < 0.05 & p_x2 < 0.05]),
       different_direction_n = sum(p_x1 < 0.05 & p_x2 < 0.05),
       different_significance_s = sum(
-        (dplyr::between(p_x1, 0.025, 0.05) & p_x2 >= 0.05) | (dplyr::between(p_x2, 0.025, 0.05) & p_x1 >= 0.05)),
+        (p_x1 < 0.05 & p_x2 >= 0.05) | (p_x1 >= 0.05 & p_x2 < 0.05)),
       different_significance_n =  sum(p_x1 < 0.05 | p_x2 < 0.05),
       .by = c(icc, rho, N)) |>
     dplyr::mutate(
-      dd_lower = qbeta(0.025, 1/2 + different_direction_n - different_direction_s, 1/2 + different_direction_n),
-      dd_med = qbeta(0.5, 1/2 + different_direction_n - different_direction_s, 1/2 + different_direction_n),
-      dd_upper = qbeta(0.975, 1/2 + different_direction_n - different_direction_s, 1/2 + different_direction_n),
-      ds_lower = qbeta(0.025, 1/2 + different_significance_s, 1/2 + different_significance_n),
-      ds_upper = qbeta(0.975, 1/2 + different_significance_s, 1/2 + different_significance_n),
-      ds_med = qbeta(0.5, 1/2 + different_significance_s, 1/2 + different_significance_n)) |>
+      ds_a = 1/2 + different_significance_s,
+      ds_b = 1/2 + different_significance_n - different_significance_s,
+      dd_a = 1/2 + different_direction_s,
+      dd_b = 1/2 + different_direction_n - different_direction_s,
+      dd_lower = qbeta(0.025, dd_a, dd_b),
+      dd_med = qbeta(0.5, dd_a, dd_b),
+      dd_upper = qbeta(0.975, dd_a, dd_b),
+      dd_avg = different_direction_s / different_direction_n,
+      ds_lower = qbeta(0.025, ds_a, ds_b),
+      ds_upper = qbeta(0.975, ds_a, ds_b),
+      ds_med = qbeta(0.5, ds_a, ds_b),
+      ds_avg = different_significance_s / different_significance_n) |>
     dplyr::select(icc, rho, N, tidyselect::starts_with("dd"), tidyselect::starts_with("ds"))
 }
 

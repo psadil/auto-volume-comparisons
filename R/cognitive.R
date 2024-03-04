@@ -233,17 +233,18 @@ get_cog_dif_sig <- function(cog_cor, cog_cor_full_ukb){
     dplyr::summarise(
       different_significance_s = 
         sum(
-          (dplyr::between(FIRST, 0.025, 0.05) & FreeSurfer >= 0.05) | 
-            (dplyr::between(FreeSurfer, 0.025, 0.05) & FIRST >= 0.05), 
+          (FIRST < 0.05 & FreeSurfer >= 0.05) | 
+            (FreeSurfer < 0.05 & FIRST >= 0.05), 
           na.rm = TRUE),
       different_significance_n =  sum(FIRST < 0.05 | FreeSurfer < 0.05, na.rm = TRUE),
       .by = c(predictor, N, Hemisphere)) |>
     dplyr::mutate(
       a = 1/2 + different_significance_s,
-      b = 1/2 + different_significance_n,
+      b = 1/2 + different_significance_n - different_significance_s,
       ds_med = qbeta(0.5, a, b),
       ds_lower = qbeta(0.025, a, b),
-      ds_upper = qbeta(0.975, a, b)) |>
+      ds_upper = qbeta(0.975, a, b),
+      ds_avg = different_significance_s / different_significance_n) |>
     dplyr::left_join(d0, by=dplyr::join_by(predictor, Hemisphere))
   
 }
@@ -260,16 +261,17 @@ get_cog_dif_dir <- function(cog_cor, cog_cor_full_ukb){
     dplyr::mutate(same_sign = sign(estimate_FIRST) == sign(estimate_FreeSurfer)) |>
     dplyr::select(-tidyselect::starts_with("estimate")) |>
     dplyr::summarise(
-      different_direction_s = sum(same_sign[p.value_FreeSurfer < 0.05 & p.value_FIRST < 0.05], na.rm = TRUE),
+      different_direction_s = sum(!same_sign[p.value_FreeSurfer < 0.05 & p.value_FIRST < 0.05], na.rm = TRUE),
       different_direction_n = sum(p.value_FreeSurfer < 0.05 & p.value_FIRST < 0.05, na.rm = TRUE),
       .by = c(predictor, N, Hemisphere)
     ) |>
     dplyr::mutate(
-      a = 1/2 + different_direction_n - different_direction_s,
-      b = 1/2 + different_direction_n,
+      a = 1/2 + different_direction_s,
+      b = 1/2 + different_direction_n - different_direction_s,
       dd_med = qbeta(0.5, a, b),
       dd_lower = qbeta(0.025, a, b),
-      dd_upper = qbeta(0.975, a, b)) |>
+      dd_upper = qbeta(0.975, a, b),
+      dd_avg = different_direction_s / different_direction_n) |>
     dplyr::select(predictor, N, tidyselect::starts_with("dd"), different_direction_n, Hemisphere) |>
     dplyr::left_join(d0, by=dplyr::join_by(predictor, Hemisphere))
 }
