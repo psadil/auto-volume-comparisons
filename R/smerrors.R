@@ -23,8 +23,10 @@
   cor.test(y, x)
 }
 
-.icc_to_sigma_epsilon <- function(icc, sigma_lambda = 1){
-  (1 / icc - 1) * sigma_lambda
+.icc_to_sigma_epsilon <- function(icc, sigma_lambda = 1, sigma_c = 0){
+  # (1 / icc - 1) * sigma_lambda^2
+  # icc(A,1) = sigma_lambda^2 / (sigma_lambda^2 + sigma_c^2 + sigma_epsilon^2)
+  sqrt(sigma_lambda^2 - icc * (sigma_c^2 + sigma_lambda^2)) / sqrt(icc)
 }
 
 get_single_data <- function(
@@ -38,7 +40,7 @@ get_single_data <- function(
   
   # model of using one method only (e.g., researcher prefers either FSL or FS)
   sigma_lambda <- 1
-  sigma_epsilon <- .icc_to_sigma_epsilon(icc, sigma_lambda)
+  sigma_epsilon <- .icc_to_sigma_epsilon(icc, sigma_lambda=sigma_lambda, sigma_c=sigma_c)
   
   tidyr::crossing(
     i = seq_len(.env$i),
@@ -48,7 +50,12 @@ get_single_data <- function(
       fit = purrr::map2(
         N, rho, 
         .get_single_fit, 
-        nu=nu, beta0=beta0, sigma_epsilon=sigma_epsilon, sigma_c=sigma_c, sigma_lambda=sigma_lambda, sigma_delta=sigma_delta),
+        nu=nu, 
+        beta0=beta0, 
+        sigma_epsilon=sigma_epsilon, 
+        sigma_c=sigma_c, 
+        sigma_lambda=sigma_lambda, 
+        sigma_delta=sigma_delta),
       p = purrr::map_dbl(fit, ~.x$p.value),
       r = purrr::map_dbl(fit, ~.x$estimate),
       S = sign(rho) == sign(r),
@@ -79,13 +86,22 @@ sim_icc <- function(icc, rho, n = 50){
   MASS::mvrnorm(n, c(0,0,0), Sigma) # consider also empirical == TRUE
 }
 
+.ck_to_cks <- function(c_k){
+  c(-c_k, c_k) / 2
+}
+
+.ck_to_sigmac <- function(c_k){
+  cks <- .ck_to_cks(c_k)
+  cks^2 |> sum()
+}
+
 .get_both_fit <- function(
     N,
     rho,
     nu = 0,
     beta0 = 0,
     sigma_epsilon = 1,
-    sigma_c = 1,
+    c_k = 0,
     sigma_lambda = 1,
     sigma_delta = 1){
   
@@ -95,12 +111,12 @@ sim_icc <- function(icc, rho, n = 50){
   
   lambda <- rnorm(N, sd=sigma_lambda)
   
-  c0 <- rnorm(2, sd=sigma_c)
+  c0 <- .ck_to_cks(c_k)
   
   x <- nu + lambda + .repeat_row(c0, N) + epsilon
   
   delta <- rnorm(N, sd=sigma_delta)
-  beta1 <- rho * sigma_lambda/sigma_delta
+  beta1 <- rho * sigma_delta / sigma_lambda
   
   y <- beta0 + beta1 * lambda + delta
   
@@ -112,24 +128,29 @@ sim_icc <- function(icc, rho, n = 50){
 
 get_icc_data <- function(
     i, N, icc, rho,
+    sigma_lambda=1,
     nu = 0,
     beta0 = 0,
-    sigma_c = 1,
+    c_k = 0,
     sigma_delta = 1){
   
   # if estimating with both methods, how often do they agree?
-  
-  sigma_lambda <- 1
-  sigma_epsilon <- .icc_to_sigma_epsilon(icc, sigma_lambda)
+  sigma_epsilon <- .icc_to_sigma_epsilon(
+    icc, 
+    sigma_lambda=sigma_lambda, 
+    sigma_c=.ck_to_sigmac(c_k))
   
   tidyr::crossing(i = seq_len(i), icc=icc, rho=rho, N=N) |>
     dplyr::mutate(
       fits = purrr::pmap(
         list(rho=rho, N=N), 
         .get_both_fit,
-        nu=nu, beta0=beta0, 
-        sigma_epsilon=sigma_epsilon, sigma_c=sigma_c, 
-        sigma_lambda=sigma_lambda, sigma_delta=sigma_delta),
+        nu=nu, 
+        beta0=beta0, 
+        sigma_epsilon=sigma_epsilon, 
+        c_k=c_k, 
+        sigma_lambda=sigma_lambda, 
+        sigma_delta=sigma_delta),
       p_x1 = purrr::map_dbl(fits, ~.x[[1]]$p.value),
       p_x2 = purrr::map_dbl(fits, ~.x[[2]]$p.value),
       r_x1 = purrr::map_dbl(fits, ~.x[[1]]$estimate),
@@ -164,3 +185,11 @@ get_icc_data2 <- function(icc_data){
     dplyr::select(icc, rho, N, tidyselect::starts_with("dd"), tidyselect::starts_with("ds"))
 }
 
+get_sigma_lambda <- function(ukb_vols_long){
+  amg <- ukb_vols_long |> 
+    dplyr::filter(Structure=="Amygdala")
+  
+  fit <- lme4::lmer(Volume ~ Method + (1 | f.eid), data=amg, REML = TRUE)
+  fit_summary <- summary(fit)
+  sigma_lambda <- fit_summary$varcor$f.eid |> as.numeric()
+}

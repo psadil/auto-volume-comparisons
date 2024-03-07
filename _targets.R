@@ -23,9 +23,16 @@ list(
   # tar_target(rhos, c(0.01)),
   # tar_target(sm_N, c(seq(100, 100, by=10))),
   # tar_target(icc, c(0.5)),
+  tar_target(sigma_lambda, get_sigma_lambda(ukb_vols_long)),
   tar_target(
     icc_data, 
-    get_icc_data(N=sm_N, rho=rhos, i=1000000, icc=icc), 
+    get_icc_data(
+      N=sm_N, 
+      rho=rhos, 
+      i=1000000, 
+      icc=icc, 
+      c_k=0,
+      sigma_lambda=sigma_lambda), 
     pattern = cross(rhos, sm_N, icc),
     format = "parquet"),
   tar_target(
