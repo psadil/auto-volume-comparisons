@@ -1,7 +1,7 @@
 
 ## Comparison of Volumes Estimated by FreeSurfer and FSL
 
-This repo holds the manuscript and analyses for *Comparing Automated Subcortical Volume Estimation Methods; Amygdala Volumes Estimated by FSL and FreeSurfer have Low Consistency*.
+This repo holds the manuscript and analyses for *Comparing Automated Subcortical Volume Estimation Methods; Amygdala Volumes Estimated by FSL and FreeSurfer Have Poor Consistency*. A preprint is available on biorxiv: https://doi.org/10.1101/2024.03.07.583900.
 
 
 ## Reproducing Analyses

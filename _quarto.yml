@@ -17,7 +17,7 @@ format:
       - text: |
           \usepackage[section]{placeins}
     journal:
-      name: Journal Name
+      name: bioRxiv
       formatting: preprint
       model: 1p
       cite-style: authoryear
