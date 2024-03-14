@@ -1,5 +1,5 @@
 ---
-title: Comparing Automated Subcortical Volume Estimation Methods; Amygdala Volumes Estimated by FSL and FreeSurfer have Low Consistency.
+title: Comparing Automated Subcortical Volume Estimation Methods; Amygdala Volumes Estimated by FSL and FreeSurfer Have Poor Consistency
 author:
   - name: Patrick Sadil
     corresponding: true
@@ -115,7 +115,7 @@ Comparisons of Subcortical Volumes Estimated by FSL and FreeSurfer for two examp
 
 :::
 
-Across all structures, estimated agreement was lower than estimated consistency (@stbl-iccs), reflecting differences in the average volumes estimated by the two methods ([-@sec-avg-shift]). However, a constant shift across participants would not affect our primary focus, which is related to estimated correlations between regional volumes and some other measure. For that reason, we focus not on agreement but instead on consistency.
+Across all structures, estimated agreement was lower than estimated consistency (@stbl-iccs), reflecting differences in the average volumes estimated by the two methods ([-@sec-avg-shift]). However, a constant shift across participants would not affect many analyses targeted by our primary concern, analyses related to estimated correlations between regional volumes and some other measure. For that reason, we focus not on agreement but instead on consistency.
 
 ```{r contrasts}
 
@@ -155,7 +155,7 @@ tbl_iccs_hip <- tbl_iccs |>
 ```
 
 
-Consistency varies by region (@fig-vol-comparison, @stbl-iccs). To interpret the intraclass correlations, consider the categories provided by @cicchetti1981: <0.4: poor, [0.4, 0.6): fair, [0.6, 0.75): good, [0.75, 1): excellent. Using those categories, the methods exhibit "good" to "excellent" consistency for most regions. However, the consistency of volumes for the amygdala is markedly worse than the others, being around only ~`r tbl_iccs_amg$lower_Left`~`r tbl_iccs_amg$icc_Left`~`r tbl_iccs_amg$upper_Left`~ and ~`r tbl_iccs_amg$lower_Right`~`r tbl_iccs_amg$icc_Right`~`r tbl_iccs_amg$upper_Right`~ for the left and right hemispheres (ranges of uncertainty span 95% confidence intervals). Compare the amygdala to the hippocampus (@fig-vol-comparison), which has good consistency (left: ~`r tbl_iccs_hip$lower_Left`~`r tbl_iccs_hip$icc_Left`~`r tbl_iccs_hip$upper_Left`~, right: ~`r tbl_iccs_hip$lower_Right`~`r tbl_iccs_hip$icc_Right`~`r tbl_iccs_hip$upper_Right`~). For both structures (that is, the amygdala and hippocampus), consistency across hemispheres as reported by FreeSurfer is the highest numerically (@fig-vol-comparison). For the amygdala, there is a two-way interaction between method and hemisphere (FSL - FreeSurfer: `r fit_amygdala_contrasts_interaction$estimate`, $p<0.001$), with FreeSurfer reporting that the right amygdala is larger than the left (left - right: `r fit_amygdala_contrasts_disp[fit_amygdala_contrasts_disp$contrast=="Left FreeSurfer - Right FreeSurfer",]$estimate`, $p<0.001$) and FSL reporting that the left is larger than the right (left - right: `r fit_amygdala_contrasts_disp[fit_amygdala_contrasts_disp$contrast=="Left FIRST - Right FIRST",]$estimate`, $p<0.001$).
+Consistency varies by region (@fig-vol-comparison, @stbl-iccs). To interpret the intraclass correlations, consider the categories provided by @cicchetti1981: <0.4: poor, [0.4, 0.6): fair, [0.6, 0.75): good, [0.75, 1): excellent. Using those categories, the methods exhibit "good" to "excellent" consistency for most regions. However, the consistency of volumes for the amygdala is markedly worse than the others, being around only ~`r tbl_iccs_amg$lower_Left`~`r tbl_iccs_amg$icc_Left`~`r tbl_iccs_amg$upper_Left`~ and ~`r tbl_iccs_amg$lower_Right`~`r tbl_iccs_amg$icc_Right`~`r tbl_iccs_amg$upper_Right`~ for the left and right hemispheres (ranges of uncertainty span 95% confidence intervals). Compare those values to the values for the hippocampus (@fig-vol-comparison), which has good consistency (left: ~`r tbl_iccs_hip$lower_Left`~`r tbl_iccs_hip$icc_Left`~`r tbl_iccs_hip$upper_Left`~, right: ~`r tbl_iccs_hip$lower_Right`~`r tbl_iccs_hip$icc_Right`~`r tbl_iccs_hip$upper_Right`~). For both structures (that is, the amygdala and hippocampus), consistency across hemispheres as reported by FreeSurfer is the highest numerically (@fig-vol-comparison). For the amygdala, there is a two-way interaction between method and hemisphere (FSL - FreeSurfer: `r fit_amygdala_contrasts_interaction$estimate`, $p<0.001$), with FreeSurfer reporting that the right amygdala is larger than the left (left - right: `r fit_amygdala_contrasts_disp[fit_amygdala_contrasts_disp$contrast=="Left FreeSurfer - Right FreeSurfer",]$estimate`, $p<0.001$) and FSL reporting that the left is larger than the right (left - right: `r fit_amygdala_contrasts_disp[fit_amygdala_contrasts_disp$contrast=="Left FIRST - Right FIRST",]$estimate`, $p<0.001$).
 
 The amygdala has been described as particularly challenging to segment; one small study (N=23) reports a consistency of 0.6 for volumes estimated by FSL across repeated scans of the same individual [@morey2010]. Moreover, automated segmentation algorithms can be affected by experimental factors like site, scanner, participant positioning, and software version [@hedges2022; @du2021; @mcguire2017; @yang2016; @liu2020; @mulder_hippocampal_2014; @morey2010; @perlaki2017], and differential sensitivity to such factors could impact an intraclass correlation. In the UKB, several potentially confounding factors were correlated with estimates of amygdalar volume (@sfig-partials-amyg). However, regressing these factors from the estimates of volume did not improve the consistency between the methods ([-@sec-confounds]).
 
@@ -199,7 +199,7 @@ a <- icc_data2 |>
   geom_raster() +
   scale_fill_viridis_c(
     option="turbo",
-    name="Estimated\nProportion",
+    name="Estimated Proportion",
     limits = c(0, 1)) +
   scale_x_continuous(
     "N Participants",
@@ -230,7 +230,7 @@ b <- ukb_examples |>
   geom_raster() +
   scale_fill_viridis_c(
     option="turbo",
-    name = "Estimated\nProportion",
+    name = "Estimated Proportion",
     limits = c(0, 1)) +
   ylab("Cognitive Variable (rho)") +
   scale_x_continuous(
@@ -240,11 +240,16 @@ b <- ukb_examples |>
   ggtitle("UKB")  +
   theme_gray(base_size = 9)
 
-a + b + plot_layout(ncol=2, guides = "collect") + plot_annotation(tag_levels = "a", tag_suffix = ")") & theme(legend.position = "bottom")
+a + b + 
+  plot_layout(ncol=2, guides = "collect") + 
+  plot_annotation(tag_levels = "a", tag_suffix = ")") & 
+  theme(
+    legend.position = "bottom"
+    )
 ```
 
 
-Effects of Low Measurement Consistency. In the subfigures, the left column or panel shows the proportion of simulated experiments where the methods produce correlations on opposite sides of an $\alpha=0.05$ significance threshold. The right column or panel shows the proportion of simulated experiments where both measures are significantly correlated with an outcome but in opposite directions. Proportions are shown with color [@swihart_lasagna_2010]. a) Simulations with Artificial Data. Rows (rho) indicate pre-specified correlation. ICC: assumed intraclass correlation between measures of volume. b) Simulations with UKB. Each row corresponds to a non-image derived phenotype from the UKB. The value in parentheses is the absolute correlation of the variable with the average volumes of the left amygdala (average across methods). For a display without color that includes estimates of uncertainty, see @sfig-left-right.
+Effects of Low Measurement Consistency. In the subfigures, the left column or panel shows the proportion of simulated experiments where the methods produce correlations on opposite sides of an $\alpha=0.05$ significance threshold. The right column or panel shows the proportion of simulated experiments where both measures are significantly correlated with an outcome but in opposite directions. Proportions are shown with color [@swihart_lasagna_2010]. a) Simulations with Artificial Data. Rows (rho) indicate pre-specified product-moment correlation with the outcome variable. ICC: pre-specified intraclass correlation between measures of volume. b) Simulations with UKB. Each row corresponds to a non-image derived phenotype from the UKB. The value in parentheses is the absolute correlation of the variable with the average volumes of the left amygdala (average across methods). For a display without color that includes estimates of uncertainty, see @sfig-left-right.
 :::
 
 To investigate how often these two issues could occur, we first simulated experiments with artificial data. In each simulation, datasets with two noisy estimates of volume and a third, outcome, variable were generated such that the two volume estimates had a pre-specified intraclass correlation with each other (in expectation), and the true volume had a given product-moment correlation with the outcome variable. The estimated volumes were then tested for a product-moment correlation with the outcome, and the process was repeated for several intraclass correlations and sample sizes. In all simulations, the true product-moment correlation was set to a value that is either typical for neuroimaging research [0.1, @marek_reproducible_2022], small but non-zero (0.01), or large (0.2). For additional details on the simulation methods, see [-@sec-sim-details].
@@ -266,6 +271,18 @@ ukb_example_max <- ukb_examples |>
   filter(N==50) |>
   slice_max(order_by = ds_med, n=1) |>
   mutate(across(starts_with(c("ds_", "dd_")), \(x) format(x*100, digits = 3, nsmall=1)))
+
+dd_increasing <- ukb_examples |> 
+  filter(N %in% c(50, 100), Hemisphere=="Left") |>
+  select(predictor, N, dd_med, dd_lower, dd_upper) |>
+  pivot_longer(starts_with("dd_")) |>
+  pivot_wider(names_from=c(N, name)) |>
+  filter(`100_dd_med` > `50_dd_med`)
+
+dd_increasing2 <- dd_increasing |>
+  filter(`100_dd_lower` > `50_dd_upper`)
+
+
 ```
 
 
@@ -277,7 +294,7 @@ To assess how often these two issues could occur in practice, we repeated the ab
 
 Considering differing significance levels, the rates across experiments using the UKB resembled the rates from experiments with artificial data. In simulated experiments with 50 UKB participants in which at least one correlation was significant, one correlation was not significant in between ~`r ukb_example_min$ds_lower`~`r ukb_example_min$ds_med`~`r ukb_example_min$ds_upper`~ and ~`r ukb_example_max$ds_lower`~`r ukb_example_max$ds_med`~`r ukb_example_max$ds_upper`~ percent of simulations (the two estimates cover the 50 cognitive variables; @fig-sm-errors$\~$b, left panel). Proportions were generally lower for variables that were more strongly correlated with the measure of volume (for illustration, compare the variables that are higher versus lower in the left panel of @fig-sm-errors$\~$b).
 
-Considering significant correlations with differing signs, the rates across experiments with the UKB bracketed the rates with artificial data. In experiments simulated with 50 UKB participants, the rates ranged from ~`r ukb_example_min$dd_lower`~`r ukb_example_min$dd_med`~`r ukb_example_min$dd_upper`~ to ~`r ukb_example_max$dd_lower`~`r ukb_example_max$dd_med`~`r ukb_example_max$dd_upper`~. For most variables, increasing the number of participants decreased the proportion of experiments in which the two correlations exhibited opposite signs, but for some the proportion increased. Across the 50 variables, 9 had a higher proportion at N=100 than N=50, 2 of which had non-overlapping 95% equal-tailed intervals (6348: duration to complete numeric path; 400: time to complete round of pairs matching game; see also @sfig-left-right).
+Considering significant correlations with differing signs, the rates across experiments with the UKB bracketed the rates with artificial data. In experiments simulated with 50 UKB participants, the rates ranged from ~`r ukb_example_min$dd_lower`~`r ukb_example_min$dd_med`~`r ukb_example_min$dd_upper`~ to ~`r ukb_example_max$dd_lower`~`r ukb_example_max$dd_med`~`r ukb_example_max$dd_upper`~. For most variables, increasing the number of participants decreased the proportion of experiments in which the two correlations exhibited opposite signs, but for some the proportion increased. Across the 50 variables, `r nrow(dd_increasing)` had a higher proportion at N=100 than N=50, `r nrow(dd_increasing2)` of which had non-overlapping 95% equal-tailed intervals (6348: duration to complete numeric path; 400: time to complete round of pairs matching game; see also @sfig-left-right).
 
 # Discussion
 
@@ -296,6 +313,26 @@ As mentioned in the Introduction, the amygdala has received substantial attentio
 ### When replicating or extending research on a relationship that involves the volume of the amygdala, use the method reported in the original publications.
 
 This recommendation follows standard practice for a replication study. We highlight it here in consideration of both extension studies that aim to apply a biomarker or biosignature that includes amygdala volume (such as when testing a putative relationship in a new population), and also in consideration of the ongoing evolution of methods for automatically estimating subcortical volumes. Although FSL and FreeSurfer are two of the most popular methods, others exist [e.g., @akhondi-asl2013], including newer techniques based on deep-learning approaches [e.g., @billot2023; for review, see @singh2021]. Newer methods may have better correspondence with manual segmentation, warranting their use in replication or extension studies. But as this report shows, two methods can perform well while exhibiting poor consistency with each other. So when building on prior findings, it remains important to use the methods of those prior findings, even when they are superseded. 
+
+# Data and Code Availability {.unnumbered}
+
+Imaging data underlying the results presented are available from the UK Biobank upon successful application (https://www.ukbiobank.ac.uk/enableyourresearch/apply-for-access). Code to reproduce analyses is available on GitHub: https://github.com/psadil/auto-volume-comparisons. 
+
+# Author Contributions {.unnumbered}
+
+**Patrick Sadil**: Conceptualization, Methodology, Software, Validation, Formal Analysis, Investigation, Resources, Data Curation, Writing - Original Draft, Writing - Review & Editing, Visualization. **Martin A. Lindquist**: Conceptualization, Methodology, Validation, Formal Analysis, Resources, Writing - Original Draft, Writing - Review & Editing, Supervision, Project Administration, Funding Acquisition.
+
+# Declaration of Competing Interest {.unnumbered}
+
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+# Ethics Statement {.unnumbered}
+
+Informed consent was obtained from all UK Biobank participants. Ethical procedures are controlled by a dedicated Ethics Advisory Committee (http://www.ukbiobank.ac.uk/ethics).
+
+# Acknowledgements {.unnumbered}
+
+This work was supported by grant R01MH129397 from the National Institute of Mental Health. This research has been conducted using data from UK Biobank, a major biomedical database (Project ID: 33278). We are grateful to UK Biobank and the UK Biobank participants for making the resource data possible, and to the data processing team at Oxford University for sharing the processed data. The UK Biobank imaging project is funded by the Medical Research Council and the Wellcome Trust.
 
 # References {.unnumbered}
 
