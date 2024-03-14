@@ -5,7 +5,7 @@ project:
     - "!notes.qmd"
 
 execute:
-  freeze: false
+  freeze: true
   cache: true
 
 format:
