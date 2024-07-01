@@ -21,4 +21,5 @@ format:
       formatting: preprint
       model: 1p
       cite-style: authoryear
+    keep-tex: true
 
